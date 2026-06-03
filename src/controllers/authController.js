@@ -115,6 +115,13 @@ const forgotPassword = async (req, res) => {
       });
     }
 
+    // Ensure email is verified before proceeding
+    if (!user.is_verified) {
+      return res.status(400).json({
+        message: "Please verify your email before requesting a password reset.",
+      });
+    }
+
     // Generate 6 digit OTP
     const otp = Math.floor(100000 + Math.random() * 900000).toString();
 
@@ -165,6 +172,13 @@ const verifyOtp = async (req, res) => {
       });
     }
 
+    // Ensure email is verified before verifying OTP
+    if (!user.is_verified) {
+      return res.status(400).json({
+        message: "Please verify your email before verifying the OTP.",
+      });
+    }
+
     // Hash incoming OTP
     const hashedOtp = crypto.createHash("sha256").update(otp).digest("hex");
 
@@ -212,6 +226,13 @@ const resetPassword = async (req, res) => {
     if (!user) {
       return res.status(404).json({
         message: "User not found",
+      });
+    }
+
+    // Ensure email is verified before resetting password
+    if (!user.is_verified) {
+      return res.status(400).json({
+        message: "Please verify your email before resetting your password.",
       });
     }
 
