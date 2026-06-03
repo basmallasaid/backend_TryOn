@@ -6,6 +6,8 @@ require("./config/passport");
 
 const authRoutes = require("./routes/authRoutes");
 const userRoutes = require("./routes/userRoutes");
+const storeRoutes = require("./routes/storeRoutes");
+const productRoutes = require("./routes/productRoutes");
 
 const app = express();
 
@@ -29,5 +31,8 @@ app.use(passport.session());
 // Routes
 app.use("/api/auth", authRoutes);
 app.use("/api/users", userRoutes);
+app.use("/api/stores", storeRoutes);
+app.use("/api/products", productRoutes);
+app.use("/api/stores/:store_id/products", productRoutes);
 
 module.exports = app;
