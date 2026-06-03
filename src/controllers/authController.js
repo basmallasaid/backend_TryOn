@@ -6,9 +6,9 @@ const sendEmail = require("../utils/sendEmail");
 
 const registerUser = async (req, res) => {
   try {
-    const { email, password, confirmPassword, firstName, lastName, gender } = req.body;
+    const { email, password, confirmPassword } = req.body;
 
-    if (!email || !password || !confirmPassword || !firstName || !lastName || !gender) {
+    if (!email || !password || !confirmPassword) {
       return res.status(400).json({
         message: "Please fill all fields",
       });
@@ -36,9 +36,9 @@ const registerUser = async (req, res) => {
       password_hash: hashedPassword,
       auth_provider: "local",
       profile: {
-        first_name: firstName,
-        last_name: lastName,
-        gender,
+        first_name: null,
+        last_name: null,
+        gender: null,
       },
     });
 
