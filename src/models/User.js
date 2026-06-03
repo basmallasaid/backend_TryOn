@@ -8,61 +8,69 @@ const userSchema = new mongoose.Schema(
       unique: true,
     },
 
-    password: String,
+    password_hash: String,
 
-    googleId: String,
-
-    // Profile Information
-    firstName: {
+    auth_provider: {
       type: String,
-      default: "",
+      enum: ["local", "google"],
+      default: "local",
     },
 
-    lastName: {
-      type: String,
-      default: "",
+    google_id: String,
+
+    profile: {
+      first_name: {
+        type: String,
+        default: null,
+      },
+      last_name: {
+        type: String,
+        default: null,
+      },
+      date_of_birth: {
+        type: Date,
+        default: null,
+      },
+      gender: {
+        type: String,
+        default: null,
+      },
     },
 
-    dateOfBirth: {
-      type: Date,
-      default: null,
-    },
-
-    gender: {
-      type: String,
-      enum: ["Male", "Female"],
-      default: null,
-    },
-
-    // Helps frontend know whether user completed profile
-    profileCompleted: {
+    profile_completed: {
       type: Boolean,
       default: false,
     },
 
-    // Reset Password
-    resetOtp: String,
+    settings: {
+      language: {
+        type: String,
+        default: "en",
+      },
+      notifications_enabled: {
+        type: Boolean,
+        default: true,
+      },
+      has_mobile_app: {
+        type: Boolean,
+        default: false,
+      },
+    },
 
-    resetOtpExpire: Date,
+    reset_token: String,
 
-    isOtpVerified: {
+    reset_token_expires: Date,
+
+    is_otp_verified: {
       type: Boolean,
       default: false,
-    },
-
-    // Settings
-    language: {
-      type: String,
-      default: "en",
-    },
-
-    notificationsEnabled: {
-      type: Boolean,
-      default: true,
     },
   },
   {
-    timestamps: true,
+    timestamps: {
+      createdAt: "created_at",
+      updatedAt: "updated_at",
+    },
   },
 );
 

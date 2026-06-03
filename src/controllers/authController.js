@@ -6,9 +6,9 @@ const sendEmail = require("../utils/sendEmail");
 
 const registerUser = async (req, res) => {
   try {
-    const { email, password, confirmPassword } = req.body;
+    const { email, password, confirmPassword, firstName, lastName, gender } = req.body;
 
-    if (!email || !password || !confirmPassword) {
+    if (!email || !password || !confirmPassword || !firstName || !lastName || !gender) {
       return res.status(400).json({
         message: "Please fill all fields",
       });
@@ -29,17 +29,21 @@ const registerUser = async (req, res) => {
     }
 
     const salt = await bcrypt.genSalt(10);
-
     const hashedPassword = await bcrypt.hash(password, salt);
 
     const user = await User.create({
       email,
-      password: hashedPassword,
+      password_hash: hashedPassword,
+      auth_provider: "local",
+      profile: {
+        first_name: firstName,
+        last_name: lastName,
+        gender,
+      },
     });
 
     res.status(201).json({
-      _id: user._id,
-      email: user.email,
+      message: "User registered successfully",
       token: generateToken(user._id),
     });
   } catch (error) {
@@ -71,14 +75,14 @@ const loginUser = async (req, res) => {
     }
 
     // If account created with Google only
-    if (!user.password) {
+    if (!user.password_hash) {
       return res.status(400).json({
-        message: "Please login with Google", // need editing
+        message: "login with Google",
       });
     }
 
     // Compare passwords
-    const isMatch = await bcrypt.compare(password, user.password);
+    const isMatch = await bcrypt.compare(password, user.password_hash);
 
     if (!isMatch) {
       return res.status(401).json({
@@ -118,12 +122,12 @@ const forgotPassword = async (req, res) => {
     const hashedOtp = crypto.createHash("sha256").update(otp).digest("hex");
 
     // Save hashed OTP
-    user.resetOtp = hashedOtp;
+    user.reset_token = hashedOtp;
 
     // OTP expires after 5 minutes
-    user.resetOtpExpire = Date.now() + 5 * 60 * 1000;
+    user.reset_token_expires = Date.now() + 5 * 60 * 1000;
 
-    user.isOtpVerified = false;
+    user.is_otp_verified = false;
 
     await user.save();
 
@@ -165,21 +169,21 @@ const verifyOtp = async (req, res) => {
     const hashedOtp = crypto.createHash("sha256").update(otp).digest("hex");
 
     // Compare OTP
-    if (user.resetOtp !== hashedOtp) {
+    if (user.reset_token !== hashedOtp) {
       return res.status(400).json({
         message: "Invalid OTP",
       });
     }
 
     // Check expiration
-    if (user.resetOtpExpire < Date.now()) {
+    if (user.reset_token_expires < Date.now()) {
       return res.status(400).json({
         message: "OTP expired",
       });
     }
 
     // Mark verified
-    user.isOtpVerified = true;
+    user.is_otp_verified = true;
 
     await user.save();
 
@@ -212,7 +216,7 @@ const resetPassword = async (req, res) => {
     }
 
     // Must verify OTP first
-    if (!user.isOtpVerified) {
+    if (!user.is_otp_verified) {
       return res.status(400).json({
         message: "OTP not verified",
       });
@@ -220,17 +224,14 @@ const resetPassword = async (req, res) => {
 
     // Hash password
     const salt = await bcrypt.genSalt(10);
-
     const hashedPassword = await bcrypt.hash(password, salt);
 
-    user.password = hashedPassword;
+    user.password_hash = hashedPassword;
 
     // Clear reset fields
-    user.resetOtp = undefined;
-
-    user.resetOtpExpire = undefined;
-
-    user.isOtpVerified = false;
+    user.reset_token = undefined;
+    user.reset_token_expires = undefined;
+    user.is_otp_verified = false;
 
     await user.save();
 

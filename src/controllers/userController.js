@@ -12,14 +12,23 @@ const updateProfile = async (req, res) => {
       });
     }
 
-    user.firstName = firstName || user.firstName;
-    user.lastName = lastName || user.lastName;
-    user.dateOfBirth = dateOfBirth || user.dateOfBirth;
-    user.gender = gender || user.gender;
+    if (!user.profile) {
+      user.profile = {};
+    }
+
+    user.profile.first_name = firstName || user.profile.first_name;
+    user.profile.last_name = lastName || user.profile.last_name;
+    user.profile.date_of_birth = dateOfBirth || user.profile.date_of_birth;
+    user.profile.gender = gender || user.profile.gender;
 
     // If user entered all fields
-    if (user.firstName && user.lastName && user.dateOfBirth && user.gender) {
-      user.profileCompleted = true;
+    if (
+      user.profile.first_name &&
+      user.profile.last_name &&
+      user.profile.date_of_birth &&
+      user.profile.gender
+    ) {
+      user.profile_completed = true;
     }
 
     await user.save();
@@ -37,44 +46,83 @@ const updateProfile = async (req, res) => {
 
 const getSettings = async (req, res) => {
   res.status(200).json({
-    language: req.user.language,
-    notificationsEnabled: req.user.notificationsEnabled,
+    language: req.user.settings?.language || "en",
+    notifications_enabled: req.user.settings?.notifications_enabled !== undefined ? req.user.settings.notifications_enabled : true,
+    has_mobile_app: req.user.settings?.has_mobile_app || false,
   });
 };
 
 const updateLanguage = async (req, res) => {
-  const { language } = req.body;
+  try {
+    const { language } = req.body;
+    const user = req.user;
 
-  const user = req.user;
+    if (!user.settings) {
+      user.settings = {};
+    }
 
-  user.language = language;
+    user.settings.language = language;
+    await user.save();
 
-  await user.save();
-
-  res.status(200).json({
-    message: "Language updated",
-    language,
-  });
+    res.status(200).json({
+      message: "Language updated",
+      language,
+    });
+  } catch (error) {
+    res.status(500).json({
+      message: error.message,
+    });
+  }
 };
 
 const updateNotifications = async (req, res) => {
-  const { enabled } = req.body;
+  try {
+    const { enabled } = req.body;
+    const user = req.user;
 
-  req.user.notificationsEnabled = enabled;
+    if (!user.settings) {
+      user.settings = {};
+    }
 
-  await req.user.save();
+    user.settings.notifications_enabled = enabled;
+    await user.save();
 
-  res.status(200).json({
-    message: "Notification settings updated",
-  });
+    res.status(200).json({
+      message: "Notification settings updated",
+    });
+  } catch (error) {
+    res.status(500).json({
+      message: error.message,
+    });
+  }
 };
 
 const deleteAccount = async (req, res) => {
-  await req.user.deleteOne();
+  try {
+    const { email } = req.body;
 
-  res.status(200).json({
-    message: "Account deleted successfully",
-  });
+    if (!email) {
+      return res.status(400).json({
+        message: "Email is required",
+      });
+    }
+
+    if (req.user.email !== email) {
+      return res.status(403).json({
+        message: "You are not authorized to delete this account",
+      });
+    }
+
+    await req.user.deleteOne();
+
+    res.status(200).json({
+      message: "Account deleted successfully",
+    });
+  } catch (error) {
+    res.status(500).json({
+      message: error.message,
+    });
+  }
 };
 
 module.exports = {
