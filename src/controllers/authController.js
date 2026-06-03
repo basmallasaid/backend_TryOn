@@ -73,7 +73,7 @@ const loginUser = async (req, res) => {
     // If account created with Google only
     if (!user.password) {
       return res.status(400).json({
-        message: "Please login with Google",
+        message: "Please login with Google", // need editing
       });
     }
 

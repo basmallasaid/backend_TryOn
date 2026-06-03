@@ -19,8 +19,9 @@ exports.registerToken = async (req, res) => {
 
 exports.sendToAll = async (req, res) => {
   try {
+    const { message} = req.body;
     const tokens = await UserToken.find();
-    await sendNotification(tokens, "TryOn Update", "Hello everyone!");
+    await sendNotification(tokens, "TryOn Update", message || "Check out the latest features in TryOn!");
     res.json({ message: "Sent successfully" });
   } catch (error) {
     res.status(500).json({ error: error.message });
