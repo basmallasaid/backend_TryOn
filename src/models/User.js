@@ -57,6 +57,15 @@ const userSchema = new mongoose.Schema(
       },
     },
 
+    is_verified: {
+      type: Boolean,
+      default: false,
+    },
+
+    verification_token: String,
+
+    verification_token_expires: Date,
+
     reset_token: String,
 
     reset_token_expires: Date,

@@ -8,7 +8,10 @@ const {
   forgotPassword,
   verifyOtp,
   resetPassword,
+  sendVerificationEmail,
+  verifyEmail,
 } = require("../controllers/authController");
+const protect = require("../middlewares/authMiddleware");
 const generateToken = require("../utils/generateToken");
 
 const router = express.Router();
@@ -27,6 +30,12 @@ router.post("/verify-otp", verifyOtp);
 
 // Reset Password
 router.put("/reset-password", resetPassword);
+
+// Send verification email (requires login)
+router.post("/send-verification", protect, sendVerificationEmail);
+
+// Verify email via link clicked from inbox (public)
+router.get("/verify-email/:token", verifyEmail);
 
 // Google Signup/Login
 router.get(
