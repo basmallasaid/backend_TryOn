@@ -1,6 +1,6 @@
 require("dotenv").config();
 const mongoose = require("mongoose");
-const storeService = require("./src/services/storeService");
+const storeService = require("../src/services/storeService");
 
 const runTest = async () => {
   try {
@@ -8,7 +8,6 @@ const runTest = async () => {
     await mongoose.connect(process.env.MONGO_URI);
     console.log("Connected successfully.\n");
 
-    // 1. Create a Store
     console.log("Testing CREATE STORE...");
     const sampleStore = {
       name: "Test Store",
@@ -22,19 +21,16 @@ const runTest = async () => {
     console.log("Store Created:", created);
     console.log("---------------------------------------------\n");
 
-    // 2. Get All Stores
     console.log("Testing GET ALL STORES...");
     const allStores = await storeService.getAllStores();
     console.log(`Total stores found: ${allStores.length}`);
     console.log("---------------------------------------------\n");
 
-    // 3. Get Store By ID
     console.log("Testing GET STORE BY ID...");
     const fetched = await storeService.getStoreById(created._id);
     console.log("Fetched Store:", fetched);
     console.log("---------------------------------------------\n");
 
-    // 4. Update Store
     console.log("Testing UPDATE STORE...");
     const updated = await storeService.updateStore(created._id, {
       discount_code: "SAVE20",
@@ -43,13 +39,11 @@ const runTest = async () => {
     console.log("Updated Store:", updated);
     console.log("---------------------------------------------\n");
 
-    // 5. Delete Store
     console.log("Testing DELETE STORE...");
     const deleted = await storeService.deleteStore(created._id);
     console.log("Deleted Store:", deleted);
     console.log("---------------------------------------------\n");
 
-    // Verify it was deleted
     const verifyDeleted = await storeService.getStoreById(created._id);
     if (!verifyDeleted) {
       console.log("Verification Success: Store was successfully deleted from database.");
