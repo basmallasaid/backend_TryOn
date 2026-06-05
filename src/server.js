@@ -2,10 +2,12 @@ require("dotenv").config();
 
 const app = require("./app");
 const notificationRoutes = require("./routes/notificationRoutes");
+const avatarRoutes = require("./routes/avatarRoutes");
 const connectDB = require("./config/db");
 
 connectDB();
-app.use("/api/notifications", notificationRoutes); 
+app.use("/api/notifications", notificationRoutes);
+app.use("/api/avatars", avatarRoutes);
 
 app.get("/", (req, res) => {
   res.send("TryOn Professional Backend is Online");

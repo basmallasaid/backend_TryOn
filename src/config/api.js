@@ -3,6 +3,7 @@ const CONFIG = Object.freeze({
   MODEL_ID: "Qwen/Qwen3-VL-8B-Instruct",
   KIE_API_BASE: "https://api.kie.ai",
   KIE_UPLOAD_BASE: "https://kieai.redpandaai.co",
+  KIE_TTI_MODEL: process.env.KIE_TTI_MODEL || "nano-banana-2",
 });
 
 module.exports = { CONFIG };
