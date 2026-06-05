@@ -6,6 +6,33 @@ const protect = require("../middlewares/authMiddleware");
 
 const router = Router();
 
+/**
+ * @swagger
+ * /api/recommendations:
+ *   get:
+ *     summary: Get past recommendation history
+ *     tags: [Recommendations]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *           default: 20
+ *         description: Number of results (max 100)
+ *       - in: query
+ *         name: skip
+ *         schema:
+ *           type: integer
+ *           default: 0
+ *         description: Number of results to skip
+ *     responses:
+ *       200:
+ *         description: Recommendation history
+ *       401:
+ *         description: Not authenticated
+ */
 router.get("/", protect, async (req, res) => {
   try {
     const limit = Math.min(parseInt(req.query.limit) || 20, 100);
@@ -20,6 +47,30 @@ router.get("/", protect, async (req, res) => {
   }
 });
 
+/**
+ * @swagger
+ * /api/recommendations:
+ *   post:
+ *     summary: Generate new outfit recommendations from the user's wardrobe
+ *     tags: [Recommendations]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               limit:
+ *                 type: integer
+ *                 default: 10
+ *                 description: Maximum number of outfits to recommend
+ *     responses:
+ *       200:
+ *         description: Outfit recommendations
+ *       401:
+ *         description: Not authenticated
+ */
 router.post("/", protect, async (req, res) => {
   try {
     const wardrobe = await getUserWardrobe(req.user._id);

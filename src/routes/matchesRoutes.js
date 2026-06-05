@@ -21,6 +21,33 @@ function toEngineItem(doc) {
   };
 }
 
+/**
+ * @swagger
+ * /api/matches:
+ *   get:
+ *     summary: Get match history for the user
+ *     tags: [Matches]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *           default: 20
+ *         description: Number of results (max 100)
+ *       - in: query
+ *         name: skip
+ *         schema:
+ *           type: integer
+ *           default: 0
+ *         description: Number of results to skip
+ *     responses:
+ *       200:
+ *         description: Match history
+ *       401:
+ *         description: Not authenticated
+ */
 router.get("/", protect, async (req, res) => {
   try {
     const limit = Math.min(parseInt(req.query.limit) || 20, 100);
@@ -35,6 +62,33 @@ router.get("/", protect, async (req, res) => {
   }
 });
 
+/**
+ * @swagger
+ * /api/matches:
+ *   post:
+ *     summary: Find matching items for a wardrobe item
+ *     tags: [Matches]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [wardrobe_item_id]
+ *             properties:
+ *               wardrobe_item_id:
+ *                 type: string
+ *                 description: ID of the wardrobe item to match
+ *     responses:
+ *       200:
+ *         description: Matching items returned
+ *       400:
+ *         description: wardrobe_item_id is required
+ *       404:
+ *         description: Wardrobe item not found
+ */
 router.post("/", protect, async (req, res) => {
   try {
     const { wardrobe_item_id } = req.body;

@@ -8,6 +8,33 @@ const protect = require("../middlewares/authMiddleware");
 const router = Router();
 const upload = multer({ storage: multer.memoryStorage() });
 
+/**
+ * @swagger
+ * /api/analyze:
+ *   get:
+ *     summary: Get all past analyses for the user
+ *     tags: [Analyze]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *           default: 20
+ *         description: Number of results to return (max 100)
+ *       - in: query
+ *         name: skip
+ *         schema:
+ *           type: integer
+ *           default: 0
+ *         description: Number of results to skip
+ *     responses:
+ *       200:
+ *         description: List of analyses
+ *       401:
+ *         description: Not authenticated
+ */
 router.get("/", protect, async (req, res) => {
   try {
     const limit = Math.min(parseInt(req.query.limit) || 20, 100);
@@ -22,6 +49,40 @@ router.get("/", protect, async (req, res) => {
   }
 });
 
+/**
+ * @swagger
+ * /api/analyze:
+ *   post:
+ *     summary: Upload an image for AI garment analysis
+ *     tags: [Analyze]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: force
+ *         schema:
+ *           type: string
+ *         description: Set to "true" to bypass cache
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         multipart/form-data:
+ *           schema:
+ *             type: object
+ *             required: [image]
+ *             properties:
+ *               image:
+ *                 type: string
+ *                 format: binary
+ *                 description: Image file to analyze
+ *     responses:
+ *       200:
+ *         description: Analysis results (cached or fresh)
+ *       400:
+ *         description: Image file is required
+ *       401:
+ *         description: Not authenticated
+ */
 router.post("/", protect, upload.single("image"), async (req, res) => {
   try {
     if (!req.file) {
@@ -71,6 +132,27 @@ router.post("/", protect, upload.single("image"), async (req, res) => {
   }
 });
 
+/**
+ * @swagger
+ * /api/analyze/{id}:
+ *   delete:
+ *     summary: Delete a single analysis by ID
+ *     tags: [Analyze]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Analysis ID
+ *     responses:
+ *       200:
+ *         description: Analysis deleted
+ *       404:
+ *         description: Analysis not found
+ */
 router.delete("/:id", protect, async (req, res) => {
   try {
     const deleted = await Analysis.findOneAndDelete({
@@ -86,6 +168,20 @@ router.delete("/:id", protect, async (req, res) => {
   }
 });
 
+/**
+ * @swagger
+ * /api/analyze:
+ *   delete:
+ *     summary: Clear all analyses for the user
+ *     tags: [Analyze]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: All analyses cleared
+ *       401:
+ *         description: Not authenticated
+ */
 router.delete("/", protect, async (req, res) => {
   try {
     await Analysis.deleteMany({ user_id: req.user._id });

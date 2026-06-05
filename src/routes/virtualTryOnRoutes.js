@@ -5,6 +5,37 @@ const { generateVirtualTryOn } = require("../services/virtualTryOn.js");
 const router = Router();
 const upload = multer({ storage: multer.memoryStorage() });
 
+/**
+ * @swagger
+ * /api/virtual-tryon:
+ *   post:
+ *     summary: Generate a virtual try-on
+ *     tags: [Virtual Try-On]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         multipart/form-data:
+ *           schema:
+ *             type: object
+ *             required: [personImage, garmentImage]
+ *             properties:
+ *               personImage:
+ *                 type: string
+ *                 format: binary
+ *                 description: Image of the person
+ *               garmentImage:
+ *                 type: string
+ *                 format: binary
+ *                 description: Image of the garment
+ *               prompt:
+ *                 type: string
+ *                 description: Optional prompt for the AI model
+ *     responses:
+ *       200:
+ *         description: Virtual try-on result
+ *       400:
+ *         description: Both personImage and garmentImage are required
+ */
 router.post(
   "/",
   upload.fields([

@@ -16,28 +16,191 @@ const generateToken = require("../utils/generateToken");
 
 const router = express.Router();
 
-// Manual Signup
+/**
+ * @swagger
+ * /api/auth/signup:
+ *   post:
+ *     summary: Register a new user
+ *     tags: [Auth]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [email, password, confirmPassword]
+ *             properties:
+ *               email:
+ *                 type: string
+ *                 format: email
+ *               password:
+ *                 type: string
+ *                 minLength: 6
+ *               confirmPassword:
+ *                 type: string
+ *     responses:
+ *       201:
+ *         description: User registered successfully
+ *       400:
+ *         description: Validation error
+ */
 router.post("/signup", registerUser);
 
-// Manual Login
+/**
+ * @swagger
+ * /api/auth/login:
+ *   post:
+ *     summary: Login with email & password
+ *     tags: [Auth]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [email, password]
+ *             properties:
+ *               email:
+ *                 type: string
+ *                 format: email
+ *               password:
+ *                 type: string
+ *     responses:
+ *       200:
+ *         description: Login successful, returns JWT token
+ *       401:
+ *         description: Invalid credentials
+ */
 router.post("/login", loginUser);
 
-// Forgot Password
+/**
+ * @swagger
+ * /api/auth/forgot-password:
+ *   post:
+ *     summary: Request password reset OTP
+ *     tags: [Auth]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [email]
+ *             properties:
+ *               email:
+ *                 type: string
+ *                 format: email
+ *     responses:
+ *       200:
+ *         description: OTP sent to email
+ *       404:
+ *         description: Email not found
+ */
 router.post("/forgot-password", forgotPassword);
 
-// Verify OTP
+/**
+ * @swagger
+ * /api/auth/verify-otp:
+ *   post:
+ *     summary: Verify the OTP sent for password reset
+ *     tags: [Auth]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [email, otp]
+ *             properties:
+ *               email:
+ *                 type: string
+ *                 format: email
+ *               otp:
+ *                 type: string
+ *                 description: 6-digit OTP
+ *     responses:
+ *       200:
+ *         description: OTP verified successfully
+ *       400:
+ *         description: Invalid or expired OTP
+ */
 router.post("/verify-otp", verifyOtp);
 
-// Reset Password
+/**
+ * @swagger
+ * /api/auth/reset-password:
+ *   put:
+ *     summary: Reset password after OTP verification
+ *     tags: [Auth]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [email, newPassword]
+ *             properties:
+ *               email:
+ *                 type: string
+ *                 format: email
+ *               newPassword:
+ *                 type: string
+ *                 minLength: 6
+ *     responses:
+ *       200:
+ *         description: Password reset successful
+ *       400:
+ *         description: Error resetting password
+ */
 router.put("/reset-password", resetPassword);
 
-// Send verification email (requires login)
+/**
+ * @swagger
+ * /api/auth/send-verification:
+ *   post:
+ *     summary: Send email verification link to logged-in user
+ *     tags: [Auth]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Verification email sent
+ *       401:
+ *         description: Not authenticated
+ */
 router.post("/send-verification", protect, sendVerificationEmail);
 
-// Verify email via link clicked from inbox (public)
+/**
+ * @swagger
+ * /api/auth/verify-email/{token}:
+ *   get:
+ *     summary: Verify email via link clicked from inbox
+ *     tags: [Auth]
+ *     parameters:
+ *       - in: path
+ *         name: token
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Email verification token
+ *     responses:
+ *       200:
+ *         description: Email verified successfully (renders HTML)
+ *       400:
+ *         description: Invalid or expired token
+ */
 router.get("/verify-email/:token", verifyEmail);
 
-// Google Signup/Login
+/**
+ * @swagger
+ * /api/auth/google:
+ *   get:
+ *     summary: Initiate Google OAuth 2.0 login flow
+ *     tags: [Auth]
+ *     responses:
+ *       302:
+ *         description: Redirects to Google login page
+ */
 router.get(
   "/google",
   passport.authenticate("google", {
@@ -45,6 +208,18 @@ router.get(
   }),
 );
 
+/**
+ * @swagger
+ * /api/auth/google/callback:
+ *   get:
+ *     summary: Google OAuth callback, returns JWT token
+ *     tags: [Auth]
+ *     responses:
+ *       200:
+ *         description: Authentication successful, returns user and JWT
+ *       401:
+ *         description: Authentication failed
+ */
 router.get(
   "/google/callback",
   passport.authenticate("google", {
