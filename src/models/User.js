@@ -18,6 +18,17 @@ const userSchema = new mongoose.Schema(
 
     google_id: String,
 
+    expoPushToken: {
+      type: String,
+      default: "null",
+    },
+
+    role: {
+      type: String,
+      enum: ["user", "admin"],
+      default: "user",
+    },
+
     profile: {
       first_name: {
         type: String,

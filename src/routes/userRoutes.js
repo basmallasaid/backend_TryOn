@@ -48,18 +48,33 @@ router.put("/profile", protect, updateProfile);
 /**
  * @swagger
  * /api/users/settings:
- *   get:
+ *   post:
  *     summary: Get user settings (language, notifications, mobile app)
  *     tags: [Users]
  *     security:
  *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [email]
+ *             properties:
+ *               email:
+ *                 type: string
+ *                 format: email
  *     responses:
  *       200:
  *         description: User settings retrieved
+ *       400:
+ *         description: Email is required
  *       401:
  *         description: Not authenticated
+ *       403:
+ *         description: Email does not match authenticated user
  */
-router.get("/settings", protect, getSettings);
+router.post("/settings", protect, getSettings);
 
 /**
  * @swagger

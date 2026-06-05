@@ -1,6 +1,7 @@
 const express = require("express");
 const router = express.Router();
 const notificationController = require("../controllers/notificationController");
+const protect = require("../middlewares/authMiddleware");
 
 /**
  * @swagger
@@ -8,6 +9,8 @@ const notificationController = require("../controllers/notificationController");
  *   post:
  *     summary: Register an Expo push token
  *     tags: [Notifications]
+ *     security:
+ *       - bearerAuth: []
  *     requestBody:
  *       required: true
  *       content:
@@ -24,8 +27,47 @@ const notificationController = require("../controllers/notificationController");
  *         description: Token registered
  *       400:
  *         description: Token is required
+ *       401:
+ *         description: Not authenticated
  */
-router.post("/register", notificationController.registerToken);
+router.post("/register", protect, notificationController.registerToken);
+
+/**
+ * @swagger
+ * /api/notifications/send-by-email:
+ *   post:
+ *     summary: Send a push notification to a user by email using their saved Expo token
+ *     tags: [Notifications]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [email]
+ *             properties:
+ *               email:
+ *                 type: string
+ *                 format: email
+ *               title:
+ *                 type: string
+ *                 description: Notification title (optional, defaults to "Notification")
+ *               body:
+ *                 type: string
+ *                 description: Notification body (optional, defaults to "You have a new notification.")
+ *     responses:
+ *       200:
+ *         description: Notification sent successfully
+ *       400:
+ *         description: Email is required / No push token registered
+ *       401:
+ *         description: Not authenticated
+ *       404:
+ *         description: User not found
+ */
+router.post("/send-by-email", protect, notificationController.sendNotificationsByEmail);
 
 /**
  * @swagger
@@ -33,11 +75,15 @@ router.post("/register", notificationController.registerToken);
  *   get:
  *     summary: Send a test notification to all registered tokens
  *     tags: [Notifications]
+ *     security:
+ *       - bearerAuth: []
  *     responses:
  *       200:
  *         description: Test notification sent
+ *       401:
+ *         description: Not authenticated
  */
-router.get("/send-test", notificationController.sendToAll);
+router.get("/send-test", protect, notificationController.sendToAll);
 
 /**
  * @swagger
@@ -45,6 +91,8 @@ router.get("/send-test", notificationController.sendToAll);
  *   post:
  *     summary: Send a try-on ready notification to a specific token
  *     tags: [Notifications]
+ *     security:
+ *       - bearerAuth: []
  *     requestBody:
  *       required: true
  *       content:
@@ -61,7 +109,9 @@ router.get("/send-test", notificationController.sendToAll);
  *         description: Notification sent
  *       400:
  *         description: Token is required
+ *       401:
+ *         description: Not authenticated
  */
-router.post("/tryon-ready", notificationController.sendTryOnReady);
+router.post("/tryon-ready", protect, notificationController.sendTryOnReady);
 
 module.exports = router;

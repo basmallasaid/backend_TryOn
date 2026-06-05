@@ -45,11 +45,34 @@ const updateProfile = async (req, res) => {
 };
 
 const getSettings = async (req, res) => {
-  res.status(200).json({
-    language: req.user.settings?.language || "en",
-    notifications_enabled: req.user.settings?.notifications_enabled !== undefined ? req.user.settings.notifications_enabled : true,
-    has_mobile_app: req.user.settings?.has_mobile_app || false,
-  });
+  try {
+    const { email } = req.body;
+
+    if (!email) {
+      return res.status(400).json({ message: "Email is required" });
+    }
+
+    if (req.user.email !== email) {
+      return res.status(403).json({ message: "Email does not match authenticated user" });
+    }
+
+    const user = await User.findById(req.user._id);
+
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    res.status(200).json({
+      language: user.settings?.language || "en",
+      notifications_enabled:
+        user.settings?.notifications_enabled !== undefined
+          ? user.settings.notifications_enabled
+          : true,
+      has_mobile_app: user.settings?.has_mobile_app || false,
+    });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
 };
 
 const updateLanguage = async (req, res) => {
