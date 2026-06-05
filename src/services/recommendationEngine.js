@@ -3,7 +3,7 @@ const { getItemColors } = require("./normalizer.js");
 const CATEGORY = Object.freeze({
   TOP: "top",
   BOTTOM: "bottom",
-  SHOES: "shoes",
+  SHOES: "footwear",
   OUTERWEAR: "outerwear",
   DRESS: "dress",
   ACCESSORY: "accessory",

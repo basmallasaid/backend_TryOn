@@ -1,14 +1,8 @@
-const { getItemColors } = require("./normalizer.js");
-
-let _store = [];
-
-function generateId() {
-  return Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
-}
+const WardrobeItem = require("../models/WardrobeItem");
+const { getItemColors } = require("./normalizer");
 
 function buildWardrobeItem(garment, image) {
   return {
-    id: generateId(),
     name: garment.specificType,
     type: garment.specificType,
     category: garment.category,
@@ -23,22 +17,52 @@ function buildWardrobeItem(garment, image) {
   };
 }
 
-function loadWardrobe() {
-  return [..._store];
+const getUserWardrobe = async (userId) => {
+  return await WardrobeItem.find({ user_id: userId }).sort({ created_at: -1 });
+};
+
+function garmentFingerprint(userId, garment) {
+  const dominant = getItemColors(garment)[0]?.color || "unknown";
+  return `${userId}|${garment.category}|${String(garment.specificType).toLowerCase().trim()}|${dominant}`;
 }
 
-function saveWardrobe(items) {
-  _store = [...items];
-}
+const addFromAnalysis = async (userId, analysis, garmentIndex) => {
+  const query = { user_id: userId, analysis_id: analysis._id };
+  if (garmentIndex !== undefined) {
+    query.garment_index = garmentIndex;
+  }
 
-function removeFromWardrobe(items, id) {
-  return items.filter((i) => i.id !== id);
-}
+  const existing = await WardrobeItem.findOne(query);
+  if (existing) {
+    throw Object.assign(new Error("Already added to wardrobe"), { status: 409 });
+  }
+
+  const garments = garmentIndex !== undefined
+    ? [analysis.garments[garmentIndex]]
+    : analysis.garments;
+
+  const docs = garments.map((g, i) => ({
+    user_id: userId,
+    garment_index: garmentIndex !== undefined ? garmentIndex : i,
+    ...buildWardrobeItem(g, null),
+    analysis_id: analysis._id,
+    source: "analysis",
+  }));
+
+  return await WardrobeItem.insertMany(docs);
+};
+
+const deleteItem = async (userId, itemId) => {
+  return await WardrobeItem.findOneAndDelete({ _id: itemId, user_id: userId });
+};
+
+const clearUserWardrobe = async (userId) => {
+  return await WardrobeItem.deleteMany({ user_id: userId });
+};
 
 module.exports = {
-  generateId,
-  buildWardrobeItem,
-  loadWardrobe,
-  saveWardrobe,
-  removeFromWardrobe,
+  getUserWardrobe,
+  addFromAnalysis,
+  deleteItem,
+  clearUserWardrobe,
 };
