@@ -72,18 +72,28 @@ router.post("/send-by-email", protect, notificationController.sendNotificationsB
 /**
  * @swagger
  * /api/notifications/send-test:
- *   get:
+ *   post:
  *     summary: Send a test notification to all registered tokens
  *     tags: [Notifications]
  *     security:
  *       - bearerAuth: []
+ *     requestBody:
+ *       required: false
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               message:
+ *                 type: string
+ *                 description: Custom notification body (optional)
  *     responses:
  *       200:
  *         description: Test notification sent
  *       401:
  *         description: Not authenticated
  */
-router.get("/send-test", protect, notificationController.sendToAll);
+router.post("/send-test", protect, notificationController.sendToAll);
 
 /**
  * @swagger
