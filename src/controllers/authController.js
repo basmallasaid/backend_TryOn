@@ -3,6 +3,7 @@ const bcrypt = require("bcryptjs");
 const generateToken = require("../utils/generateToken");
 const crypto = require("crypto");
 const sendEmail = require("../utils/sendEmail");
+const { verifyGoogleIdToken } = require("../config/passport");
 
 const registerUser = async (req, res) => {
   try {
@@ -406,6 +407,39 @@ const sendVerificationEmail = async (req, res) => {
   }
 };
 
+const googleMobileLogin = async (req, res) => {
+  try {
+    const { idToken } = req.body;
+
+    if (!idToken) {
+      return res.status(400).json({ message: "idToken is required" });
+    }
+
+    const payload = await verifyGoogleIdToken(idToken);
+
+    let user = await User.findOne({ google_id: payload.sub });
+
+    if (!user) {
+      user = await User.create({
+        google_id: payload.sub,
+        email: payload.email,
+        auth_provider: "google",
+        profile: {
+          first_name: payload.given_name || "",
+          last_name: payload.family_name || "",
+        },
+      });
+    }
+
+    res.status(200).json({
+      email: user.email,
+      token: generateToken(user._id),
+    });
+  } catch (error) {
+    res.status(500).json({ message: "Server error" });
+  }
+};
+
 const verifyEmail = async (req, res) => {
   try {
     const { token } = req.params;
@@ -493,4 +527,5 @@ module.exports = {
   resetPassword,
   sendVerificationEmail,
   verifyEmail,
+  googleMobileLogin,
 };
