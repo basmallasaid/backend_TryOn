@@ -14,6 +14,7 @@ const wardrobeRoutes = require("./routes/wardrobeRoutes");
 const matchesRoutes = require("./routes/matchesRoutes");
 const recommendationsRoutes = require("./routes/recommendationsRoutes");
 const virtualTryOnRoutes = require("./routes/virtualTryOnRoutes");
+const recycleRoutes = require("./routes/recycleRoutes");
 
 const authRoutes = require("./routes/authRoutes");
 const userRoutes = require("./routes/userRoutes");
@@ -61,5 +62,6 @@ app.use("/api/wardrobe", wardrobeRoutes);
 app.use("/api/matches", matchesRoutes);
 app.use("/api/recommendations", recommendationsRoutes);
 app.use("/api/virtual-tryon", virtualTryOnRoutes);
+app.use("/api/recycle", recycleRoutes);
 
 module.exports = app;
