@@ -1,6 +1,7 @@
 const express = require("express");
 
 const passport = require("passport");
+const User = require("../models/User");
 
 const {
   registerUser,
@@ -239,5 +240,75 @@ router.get(
     });
   },
 );
+
+/**
+ * @swagger
+ * /api/auth/google/mobile:
+ *   post:
+ *     summary: Mobile Google login using ID token (bypasses redirect flow)
+ *     tags: [Auth]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [idToken]
+ *             properties:
+ *               idToken:
+ *                 type: string
+ *                 description: Google ID token from mobile Sign-In SDK
+ *     responses:
+ *       200:
+ *         description: Login successful, returns user and JWT
+ *       400:
+ *         description: idToken is required
+ *       401:
+ *         description: Invalid token
+ */
+router.post("/google/mobile", async (req, res) => {
+  const { idToken } = req.body;
+
+  if (!idToken) {
+    return res.status(400).json({ message: "idToken is required" });
+  }
+
+  try {
+    const response = await fetch(
+      `https://oauth2.googleapis.com/tokeninfo?id_token=${idToken}`,
+    );
+    const data = await response.json();
+
+    if (data.error) {
+      return res.status(401).json({ message: "Invalid Google token" });
+    }
+
+    if (data.aud !== process.env.GOOGLE_CLIENT_ID) {
+      return res.status(401).json({ message: "Token audience mismatch" });
+    }
+
+    let user = await User.findOne({ google_id: data.sub });
+
+    if (!user) {
+      user = await User.create({
+        google_id: data.sub,
+        email: data.email,
+        auth_provider: "google",
+        profile: {
+          first_name: data.given_name || "",
+          last_name: data.family_name || "",
+        },
+      });
+    }
+
+    res.status(200).json({
+      _id: user._id,
+      email: user.email,
+      token: generateToken(user._id),
+    });
+  } catch (error) {
+    res.status(500).json({ message: "Server error" });
+  }
+});
 
 module.exports = router;
