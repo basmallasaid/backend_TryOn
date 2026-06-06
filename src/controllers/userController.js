@@ -120,6 +120,20 @@ const updateNotifications = async (req, res) => {
   }
 };
 
+const getUserById = async (req, res) => {
+  try {
+    if (req.params.id !== req.user._id.toString()) {
+      return res.status(403).json({ message: "You can only view your own profile" });
+    }
+
+    const user = await User.findById(req.params.id).select("-password_hash -verification_token -verification_token_expires -reset_token -reset_token_expires");
+    if (!user) return res.status(404).json({ message: "User not found" });
+    res.json({ user });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
 const deleteAccount = async (req, res) => {
   try {
     const { email } = req.body;
@@ -153,5 +167,6 @@ module.exports = {
   getSettings,
   updateLanguage,
   updateNotifications,
+  getUserById,
   deleteAccount,
 };

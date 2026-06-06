@@ -5,6 +5,7 @@ const {
   getSettings,
   updateLanguage,
   updateNotifications,
+  getUserById,
   deleteAccount,
 } = require("../controllers/userController");
 
@@ -156,6 +157,31 @@ router.put("/settings/notifications", protect, updateNotifications);
  *       400:
  *         description: Email mismatch
  */
+/**
+ * @swagger
+ * /api/users/{id}:
+ *   get:
+ *     summary: Get a user by ID
+ *     tags: [Users]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: User ID
+ *     responses:
+ *       200:
+ *         description: User details
+ *       404:
+ *         description: User not found
+ *       401:
+ *         description: Not authenticated
+ */
+router.get("/:id", protect, getUserById);
+
 router.delete("/account", protect, deleteAccount);
 
 module.exports = router;

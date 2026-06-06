@@ -85,6 +85,11 @@ const userSchema = new mongoose.Schema(
       type: Boolean,
       default: false,
     },
+
+    avatars: {
+      type: [{ type: mongoose.Schema.Types.ObjectId, ref: "Avatar" }],
+      default: [],
+    },
   },
   {
     timestamps: {

@@ -1,6 +1,6 @@
 const express = require("express");
 const router = express.Router();
-const { createAvatar, getUserAvatars } = require("../controllers/avatarController");
+const { createAvatar, getUserAvatars, getAvatarById, updateAvatar, deleteAvatar } = require("../controllers/avatarController");
 const protect = require("../middlewares/authMiddleware");
 
 /**
@@ -83,5 +83,111 @@ router.post("/", protect, createAvatar);
  *         description: Not authenticated
  */
 router.get("/", protect, getUserAvatars);
+
+/**
+ * @swagger
+ * /api/avatars/{id}:
+ *   get:
+ *     summary: Get an avatar by ID
+ *     tags: [Avatars]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Avatar ID
+ *     responses:
+ *       200:
+ *         description: Avatar details
+ *       404:
+ *         description: Avatar not found
+ *       401:
+ *         description: Not authenticated
+ */
+router.get("/:id", protect, getAvatarById);
+
+/**
+ * @swagger
+ * /api/avatars/{id}:
+ *   put:
+ *     summary: Update an avatar
+ *     tags: [Avatars]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Avatar ID
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               age:
+ *                 type: string
+ *                 enum: [child, teenager, young adult, adult, old man, old woman]
+ *               gender:
+ *                 type: string
+ *                 enum: [male, female]
+ *               skin_tone:
+ *                 type: string
+ *                 enum: [pale, fair, olive, tan, brown, dark]
+ *               face_shape:
+ *                 type: string
+ *                 enum: [oval, round, square, heart shaped, sharp jawline]
+ *               hair_style:
+ *                 type: string
+ *                 enum: [short hair, curly hair, messy hair, fade haircut, buzz cut, long hair, wavy hair]
+ *               eye_color:
+ *                 type: string
+ *                 enum: [brown eyes, black eyes, hazel eyes, green eyes, blue eyes]
+ *               beard_style:
+ *                 type: string
+ *                 enum: [clean shave, stubble beard, trimmed beard, full beard, goatee]
+ *               facial_expression:
+ *                 type: string
+ *                 enum: [smiling, serious, neutral, confident, thoughtful, angry, happy]
+ *     responses:
+ *       200:
+ *         description: Avatar updated successfully
+ *       404:
+ *         description: Avatar not found
+ *       401:
+ *         description: Not authenticated
+ */
+router.put("/:id", protect, updateAvatar);
+
+/**
+ * @swagger
+ * /api/avatars/{id}:
+ *   delete:
+ *     summary: Delete an avatar
+ *     tags: [Avatars]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Avatar ID
+ *     responses:
+ *       200:
+ *         description: Avatar deleted successfully
+ *       404:
+ *         description: Avatar not found
+ *       401:
+ *         description: Not authenticated
+ */
+router.delete("/:id", protect, deleteAvatar);
 
 module.exports = router;
