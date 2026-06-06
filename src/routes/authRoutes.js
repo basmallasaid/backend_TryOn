@@ -203,9 +203,13 @@ router.get("/verify-email/:token", verifyEmail);
  */
 router.get(
   "/google",
-  passport.authenticate("google", {
-    scope: ["profile", "email"],
-  }),
+  (req, res, next) => {
+    passport.authenticate("google", {
+      scope: ["profile", "email"],
+      device_id: req.query.device_id,
+      device_name: req.query.device_name,
+    })(req, res, next);
+  },
 );
 
 /**
