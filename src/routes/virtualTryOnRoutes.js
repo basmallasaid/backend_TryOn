@@ -11,8 +11,11 @@ const upload = multer({ storage: multer.memoryStorage() });
  * @swagger
  * /api/virtual-tryon:
  *   post:
- *     summary: Generate a virtual try-on
+ *     summary: Generate a virtual try-on (single garment)
+ *     description: Upload a person image and a garment image. Uses KIE nano-banana-2 model to generate a photo-realistic try-on. Requires KIE API key in x-kie-api-key header.
  *     tags: [Virtual Try-On]
+ *     security:
+ *       - bearerAuth: []
  *     requestBody:
  *       required: true
  *       content:
@@ -24,22 +27,54 @@ const upload = multer({ storage: multer.memoryStorage() });
  *               personImage:
  *                 type: string
  *                 format: binary
- *                 description: Image of the person
+ *                 description: Image of the person wearing the garment
  *               garmentImage:
  *                 type: string
  *                 format: binary
- *                 description: Image of the garment
+ *                 description: Image of the garment to try on
  *               prompt:
  *                 type: string
- *                 description: Optional prompt for the AI model
+ *                 description: Optional custom prompt for the AI model
  *     responses:
  *       200:
- *         description: Virtual try-on result
+ *         description: Virtual try-on generated successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 imageUrl:
+ *                   type: string
+ *                   description: URL of the generated try-on result image
+ *                 metadata:
+ *                   type: object
+ *                   properties:
+ *                     taskId:
+ *                       type: string
+ *                     costTime:
+ *                       type: number
+ *                     model:
+ *                       type: string
+ *                     creditsConsumed:
+ *                       type: number
  *       400:
- *         description: Both personImage and garmentImage are required
+ *         description: Both personImage and garmentImage files are required
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 error:
+ *                   type: string
+ *                   example: "Both personImage and garmentImage files are required"
+ *       401:
+ *         description: Not authenticated
+ *       500:
+ *         description: Generation failed
  */
 router.post(
   "/",
+  protect,
   upload.fields([
     { name: "personImage", maxCount: 1 },
     { name: "garmentImage", maxCount: 1 },
@@ -76,7 +111,8 @@ router.post(
  * @swagger
  * /api/virtual-tryon/outfit:
  *   post:
- *     summary: Generate a virtual try-on with top and bottom garments
+ *     summary: Generate a virtual try-on with top AND bottom garments
+ *     description: Upload a person image, a top garment, and a bottom garment. Validates garment categories via AI, then generates a try-on with both garments. Requires HF_TOKEN in x-hf-token header for validation, and KIE_API_KEY in x-kie-api-key header.
  *     tags: [Virtual Try-On]
  *     security:
  *       - bearerAuth: []
@@ -95,21 +131,50 @@ router.post(
  *               topImage:
  *                 type: string
  *                 format: binary
- *                 description: Image of the top garment
+ *                 description: Image of the top garment (or outerwear)
  *               bottomImage:
  *                 type: string
  *                 format: binary
  *                 description: Image of the bottom garment
  *               prompt:
  *                 type: string
- *                 description: Optional prompt for the AI model
+ *                 description: Optional custom prompt for the AI model
  *     responses:
  *       200:
- *         description: Virtual try-on result
+ *         description: Virtual try-on generated successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 imageUrl:
+ *                   type: string
+ *                   description: URL of the generated try-on result image
+ *                 metadata:
+ *                   type: object
+ *                   properties:
+ *                     taskId:
+ *                       type: string
+ *                     costTime:
+ *                       type: number
+ *                     model:
+ *                       type: string
+ *                     creditsConsumed:
+ *                       type: number
  *       400:
- *         description: All three images are required, or garment validation failed
+ *         description: Missing images, missing token, or garment validation failed
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 error:
+ *                   type: string
+ *                   example: "Both images appear to be tops; one must be a bottom"
  *       401:
  *         description: Not authenticated
+ *       500:
+ *         description: Generation failed
  */
 router.post(
   "/outfit",

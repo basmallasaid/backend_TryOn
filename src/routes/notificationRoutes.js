@@ -22,9 +22,18 @@ const protect = require("../middlewares/authMiddleware");
  *               token:
  *                 type: string
  *                 description: Expo push token
+ *                 example: "ExponentPushToken[xxxxxxxxxxxxxxxxxxxxxx]"
  *     responses:
  *       200:
  *         description: Token registered
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Push token registered"
  *       400:
  *         description: Token is required
  *       401:
@@ -51,15 +60,26 @@ router.post("/register", protect, notificationController.registerToken);
  *               email:
  *                 type: string
  *                 format: email
+ *                 example: "user@example.com"
  *               title:
  *                 type: string
  *                 description: Notification title (optional, defaults to "Notification")
+ *                 example: "New Match!"
  *               body:
  *                 type: string
  *                 description: Notification body (optional, defaults to "You have a new notification.")
+ *                 example: "You have a new outfit match!"
  *     responses:
  *       200:
  *         description: Notification sent successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Push notification sent successfully"
  *       400:
  *         description: Email is required / No push token registered
  *       401:
@@ -87,9 +107,18 @@ router.post("/send-by-email", protect, notificationController.sendNotificationsB
  *               message:
  *                 type: string
  *                 description: Custom notification body (optional)
+ *                 example: "This is a test notification"
  *     responses:
  *       200:
  *         description: Test notification sent
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Test notification sent to all tokens"
  *       401:
  *         description: Not authenticated
  */
@@ -114,9 +143,18 @@ router.post("/send-test", protect, notificationController.sendToAll);
  *               token:
  *                 type: string
  *                 description: Expo push token
+ *                 example: "ExponentPushToken[xxxxxxxxxxxxxxxxxxxxxx]"
  *     responses:
  *       200:
  *         description: Notification sent
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Try-on ready notification sent"
  *       400:
  *         description: Token is required
  *       401:

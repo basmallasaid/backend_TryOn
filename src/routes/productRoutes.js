@@ -21,33 +21,62 @@ const protect = require("../middlewares/authMiddleware");
  *             properties:
  *               store_id:
  *                 type: string
+ *                 description: ID of the store this product belongs to
+ *                 example: "6658abc123def45678901234"
  *               name:
  *                 type: string
+ *                 example: "Blue Denim Jacket"
+ *               description:
+ *                 type: string
+ *                 example: "A stylish blue denim jacket"
  *               images:
  *                 type: array
  *                 items:
  *                   type: string
+ *                 example: ["https://example.com/jacket.jpg"]
  *               category:
  *                 type: string
- *               colors:
+ *                 enum: [top, bottom, dress, acc]
+ *                 example: "top"
+ *               color_tags:
  *                 type: array
  *                 items:
  *                   type: string
- *               seasons:
+ *                 example: ["blue", "denim"]
+ *               season_tags:
  *                 type: array
  *                 items:
  *                   type: string
+ *                   enum: [spring, summer, autumn, winter]
+ *                 example: ["spring", "autumn"]
  *               price:
  *                 type: number
+ *                 example: 79.99
+ *               currency:
+ *                 type: string
+ *                 default: "USD"
+ *                 example: "USD"
  *               purchase_url:
  *                 type: string
+ *                 example: "https://example.com/buy/jacket"
  *               try_on_enabled:
  *                 type: boolean
+ *                 default: false
  *               is_active:
  *                 type: boolean
+ *                 default: true
  *     responses:
  *       201:
- *         description: Product created
+ *         description: Product created successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 product:
+ *                   type: object
+ *       400:
+ *         description: Name and category are required
  *       401:
  *         description: Not authenticated
  */
@@ -66,25 +95,71 @@ router.post("/", protect, productController.createProduct);
  *         name: store_id
  *         schema:
  *           type: string
- *         description: Filter by store
+ *         description: Filter by store ID
  *       - in: query
  *         name: category
  *         schema:
  *           type: string
+ *           enum: [top, bottom, dress, acc]
  *         description: Filter by category
  *       - in: query
  *         name: is_active
  *         schema:
  *           type: string
+ *           enum: ["true", "false"]
  *         description: Filter by active status
  *       - in: query
  *         name: try_on_enabled
  *         schema:
  *           type: string
+ *           enum: ["true", "false"]
  *         description: Filter by try-on availability
  *     responses:
  *       200:
  *         description: List of products
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 products:
+ *                   type: array
+ *                   items:
+ *                     type: object
+ *                     properties:
+ *                       _id:
+ *                         type: string
+ *                       store_id:
+ *                         type: string
+ *                       name:
+ *                         type: string
+ *                       description:
+ *                         type: string
+ *                       images:
+ *                         type: array
+ *                         items:
+ *                           type: string
+ *                       category:
+ *                         type: string
+ *                         enum: [top, bottom, dress, acc]
+ *                       color_tags:
+ *                         type: array
+ *                         items:
+ *                           type: string
+ *                       season_tags:
+ *                         type: array
+ *                         items:
+ *                           type: string
+ *                       price:
+ *                         type: number
+ *                       currency:
+ *                         type: string
+ *                       purchase_url:
+ *                         type: string
+ *                       try_on_enabled:
+ *                         type: boolean
+ *                       is_active:
+ *                         type: boolean
  *       401:
  *         description: Not authenticated
  */
@@ -108,8 +183,17 @@ router.get("/", protect, productController.getProducts);
  *     responses:
  *       200:
  *         description: Product details
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 product:
+ *                   type: object
  *       404:
  *         description: Product not found
+ *       401:
+ *         description: Not authenticated
  */
 router.get("/:id", protect, productController.getProductById);
 
@@ -127,6 +211,7 @@ router.get("/:id", protect, productController.getProductById);
  *         required: true
  *         schema:
  *           type: string
+ *         description: Product ID
  *     requestBody:
  *       required: true
  *       content:
@@ -142,11 +227,12 @@ router.get("/:id", protect, productController.getProductById);
  *                   type: string
  *               category:
  *                 type: string
- *               colors:
+ *                 enum: [top, bottom, dress, acc]
+ *               color_tags:
  *                 type: array
  *                 items:
  *                   type: string
- *               seasons:
+ *               season_tags:
  *                 type: array
  *                 items:
  *                   type: string
@@ -160,9 +246,18 @@ router.get("/:id", protect, productController.getProductById);
  *                 type: boolean
  *     responses:
  *       200:
- *         description: Product updated
+ *         description: Product updated successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 product:
+ *                   type: object
  *       404:
  *         description: Product not found
+ *       401:
+ *         description: Not authenticated
  */
 router.put("/:id", protect, productController.updateProduct);
 
@@ -180,45 +275,22 @@ router.put("/:id", protect, productController.updateProduct);
  *         required: true
  *         schema:
  *           type: string
+ *         description: Product ID
  *     responses:
  *       200:
- *         description: Product deleted
+ *         description: Product deleted successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
  *       404:
  *         description: Product not found
- */
-router.delete("/:id", protect, productController.deleteProduct);
-
-/**
- * @swagger
- * /api/stores/{store_id}/products:
- *   get:
- *     summary: Get products by store
- *     tags: [Products]
- *     security:
- *       - bearerAuth: []
- *     parameters:
- *       - in: path
- *         name: store_id
- *         required: true
- *         schema:
- *           type: string
- *         description: Store ID
- *       - in: query
- *         name: category
- *         schema:
- *           type: string
- *         description: Filter by category
- *       - in: query
- *         name: is_active
- *         schema:
- *           type: string
- *         description: Filter by active status
- *     responses:
- *       200:
- *         description: List of products for the store
  *       401:
  *         description: Not authenticated
  */
-router.get("/", protect, productController.getProducts);
+router.delete("/:id", protect, productController.deleteProduct);
 
 module.exports = router;

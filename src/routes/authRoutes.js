@@ -34,16 +34,36 @@ const router = express.Router();
  *               email:
  *                 type: string
  *                 format: email
+ *                 example: "user@example.com"
  *               password:
  *                 type: string
  *                 minLength: 6
+ *                 example: "password123"
  *               confirmPassword:
  *                 type: string
+ *                 example: "password123"
  *     responses:
  *       201:
  *         description: User registered successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "User registered successfully. Please verify your email."
+ *                 token:
+ *                   type: string
  *       400:
- *         description: Validation error
+ *         description: Validation error (missing fields, password mismatch, email exists)
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
  */
 router.post("/signup", registerUser);
 
@@ -64,13 +84,39 @@ router.post("/signup", registerUser);
  *               email:
  *                 type: string
  *                 format: email
+ *                 example: "user@example.com"
  *               password:
  *                 type: string
+ *                 example: "password123"
  *     responses:
  *       200:
- *         description: Login successful, returns JWT token
+ *         description: Login successful, returns JWT token and user data
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 token:
+ *                   type: string
+ *                 _id:
+ *                   type: string
+ *                 email:
+ *                   type: string
+ *                 fname:
+ *                   type: string
+ *                 lname:
+ *                   type: string
+ *                 image:
+ *                   type: string
  *       401:
  *         description: Invalid credentials
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
  */
 router.post("/login", loginUser);
 
@@ -91,9 +137,17 @@ router.post("/login", loginUser);
  *               email:
  *                 type: string
  *                 format: email
+ *                 example: "user@example.com"
  *     responses:
  *       200:
  *         description: OTP sent to email
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
  *       404:
  *         description: Email not found
  */
@@ -116,12 +170,23 @@ router.post("/forgot-password", forgotPassword);
  *               email:
  *                 type: string
  *                 format: email
+ *                 example: "user@example.com"
  *               otp:
  *                 type: string
- *                 description: 6-digit OTP
+ *                 description: 6-digit OTP received via email
+ *                 example: "123456"
  *     responses:
  *       200:
  *         description: OTP verified successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                 token:
+ *                   type: string
  *       400:
  *         description: Invalid or expired OTP
  */
@@ -144,12 +209,21 @@ router.post("/verify-otp", verifyOtp);
  *               email:
  *                 type: string
  *                 format: email
+ *                 example: "user@example.com"
  *               newPassword:
  *                 type: string
  *                 minLength: 6
+ *                 example: "newSecurePass123"
  *     responses:
  *       200:
  *         description: Password reset successful
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
  *       400:
  *         description: Error resetting password
  */
@@ -198,6 +272,17 @@ router.get("/verify-email/:token", verifyEmail);
  *   get:
  *     summary: Initiate Google OAuth 2.0 login flow
  *     tags: [Auth]
+ *     parameters:
+ *       - in: query
+ *         name: device_id
+ *         schema:
+ *           type: string
+ *         description: Device ID for push notifications
+ *       - in: query
+ *         name: device_name
+ *         schema:
+ *           type: string
+ *         description: Device name
  *     responses:
  *       302:
  *         description: Redirects to Google login page
@@ -220,8 +305,8 @@ router.get(
  *     summary: Google OAuth callback, returns JWT token
  *     tags: [Auth]
  *     responses:
- *       200:
- *         description: Authentication successful, returns user and JWT
+ *       302:
+ *         description: Redirects to frontend callback URL with token and user data as query params
  *       401:
  *         description: Authentication failed
  */
@@ -261,9 +346,19 @@ router.get(
  *               idToken:
  *                 type: string
  *                 description: Google ID token from mobile Sign-In SDK
+ *                 example: "ya29.a0ARrdaM8..."
  *     responses:
  *       200:
  *         description: Login successful, returns user and JWT
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 token:
+ *                   type: string
+ *                 user:
+ *                   type: object
  *       400:
  *         description: idToken is required
  *       401:

@@ -30,17 +30,31 @@ const router = express.Router();
  *             properties:
  *               first_name:
  *                 type: string
+ *                 example: "John"
  *               last_name:
  *                 type: string
+ *                 example: "Doe"
  *               dob:
  *                 type: string
  *                 format: date
+ *                 example: "1990-01-15"
  *               gender:
  *                 type: string
  *                 enum: [male, female, other]
  *     responses:
  *       200:
  *         description: Profile updated successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                 user:
+ *                   type: object
+ *       400:
+ *         description: Validation error
  *       401:
  *         description: Not authenticated
  */
@@ -65,9 +79,21 @@ router.put("/profile", protect, updateProfile);
  *               email:
  *                 type: string
  *                 format: email
+ *                 example: "user@example.com"
  *     responses:
  *       200:
  *         description: User settings retrieved
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 language:
+ *                   type: string
+ *                 notifications:
+ *                   type: boolean
+ *                 mobile:
+ *                   type: object
  *       400:
  *         description: Email is required
  *       401:
@@ -96,9 +122,12 @@ router.post("/settings", protect, getSettings);
  *               language:
  *                 type: string
  *                 description: Language code (e.g. en, ar)
+ *                 example: "en"
  *     responses:
  *       200:
  *         description: Language updated
+ *       400:
+ *         description: Language is required
  *       401:
  *         description: Not authenticated
  */
@@ -122,6 +151,8 @@ router.put("/settings/language", protect, updateLanguage);
  *             properties:
  *               enabled:
  *                 type: boolean
+ *                 description: Whether to enable notifications
+ *                 example: true
  *     responses:
  *       200:
  *         description: Notification preference updated
@@ -149,14 +180,24 @@ router.put("/settings/notifications", protect, updateNotifications);
  *               email:
  *                 type: string
  *                 format: email
+ *                 example: "user@example.com"
  *     responses:
  *       200:
  *         description: Account deleted successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *       400:
+ *         description: Email mismatch or validation error
  *       401:
  *         description: Not authenticated
- *       400:
- *         description: Email mismatch
  */
+router.delete("/account", protect, deleteAccount);
+
 /**
  * @swagger
  * /api/users/{id}:
@@ -175,13 +216,18 @@ router.put("/settings/notifications", protect, updateNotifications);
  *     responses:
  *       200:
  *         description: User details
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 user:
+ *                   type: object
  *       404:
  *         description: User not found
  *       401:
  *         description: Not authenticated
  */
 router.get("/:id", protect, getUserById);
-
-router.delete("/account", protect, deleteAccount);
 
 module.exports = router;

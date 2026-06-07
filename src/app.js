@@ -16,6 +16,8 @@ const recommendationsRoutes = require("./routes/recommendationsRoutes");
 const virtualTryOnRoutes = require("./routes/virtualTryOnRoutes");
 const recycleRoutes = require("./routes/recycleRoutes");
 const weatherRoutes = require("./routes/weatherRoutes");
+const avatarRoutes = require("./routes/avatarRoutes");
+const notificationRoutes = require("./routes/notificationRoutes");
 
 const authRoutes = require("./routes/authRoutes");
 const userRoutes = require("./routes/userRoutes");
@@ -65,5 +67,7 @@ app.use("/api/recommendations", recommendationsRoutes);
 app.use("/api/virtual-tryon", virtualTryOnRoutes);
 app.use("/api/recycle", recycleRoutes);
 app.use("/api/weather", weatherRoutes);
+app.use("/api/avatars", avatarRoutes);
+app.use("/api/notifications", notificationRoutes);
 
 module.exports = app;

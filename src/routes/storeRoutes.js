@@ -21,17 +21,32 @@ const protect = require("../middlewares/authMiddleware");
  *             properties:
  *               name:
  *                 type: string
+ *                 example: "Fashion Hub"
  *               logo:
  *                 type: string
+ *                 description: URL to store logo image
+ *                 example: "https://example.com/logo.png"
  *               description:
  *                 type: string
+ *                 example: "A trendy fashion store"
  *               discount:
  *                 type: number
+ *                 example: 10
  *               is_active:
  *                 type: boolean
+ *                 example: true
  *     responses:
  *       201:
- *         description: Store created
+ *         description: Store created successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 store:
+ *                   type: object
+ *       400:
+ *         description: Name is required
  *       401:
  *         description: Not authenticated
  */
@@ -50,10 +65,33 @@ router.post("/", protect, storeController.createStore);
  *         name: is_active
  *         schema:
  *           type: string
+ *           enum: ["true", "false"]
  *         description: Filter by active status
  *     responses:
  *       200:
  *         description: List of stores
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 stores:
+ *                   type: array
+ *                   items:
+ *                     type: object
+ *                     properties:
+ *                       _id:
+ *                         type: string
+ *                       name:
+ *                         type: string
+ *                       logo:
+ *                         type: string
+ *                       description:
+ *                         type: string
+ *                       discount:
+ *                         type: number
+ *                       is_active:
+ *                         type: boolean
  *       401:
  *         description: Not authenticated
  */
@@ -77,8 +115,17 @@ router.get("/", protect, storeController.getStores);
  *     responses:
  *       200:
  *         description: Store details
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 store:
+ *                   type: object
  *       404:
  *         description: Store not found
+ *       401:
+ *         description: Not authenticated
  */
 router.get("/:id", protect, storeController.getStoreById);
 
@@ -96,6 +143,7 @@ router.get("/:id", protect, storeController.getStoreById);
  *         required: true
  *         schema:
  *           type: string
+ *         description: Store ID
  *     requestBody:
  *       required: true
  *       content:
@@ -115,9 +163,18 @@ router.get("/:id", protect, storeController.getStoreById);
  *                 type: boolean
  *     responses:
  *       200:
- *         description: Store updated
+ *         description: Store updated successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 store:
+ *                   type: object
  *       404:
  *         description: Store not found
+ *       401:
+ *         description: Not authenticated
  */
 router.put("/:id", protect, storeController.updateStore);
 
@@ -135,11 +192,21 @@ router.put("/:id", protect, storeController.updateStore);
  *         required: true
  *         schema:
  *           type: string
+ *         description: Store ID
  *     responses:
  *       200:
- *         description: Store deleted
+ *         description: Store deleted successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
  *       404:
  *         description: Store not found
+ *       401:
+ *         description: Not authenticated
  */
 router.delete("/:id", protect, storeController.deleteStore);
 

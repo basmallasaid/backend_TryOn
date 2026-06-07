@@ -22,6 +22,7 @@ const upload = multer({ storage: multer.memoryStorage() });
  *         schema:
  *           type: integer
  *           default: 20
+ *           maximum: 100
  *         description: Number of results to return (max 100)
  *       - in: query
  *         name: skip
@@ -32,6 +33,15 @@ const upload = multer({ storage: multer.memoryStorage() });
  *     responses:
  *       200:
  *         description: List of analyses
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 analyses:
+ *                   type: array
+ *                   items:
+ *                     $ref: '#/components/schemas/Analysis'
  *       401:
  *         description: Not authenticated
  */
@@ -54,6 +64,7 @@ router.get("/", protect, async (req, res) => {
  * /api/analyze:
  *   post:
  *     summary: Upload an image for AI garment analysis
+ *     description: Sends garment image to Hugging Face Qwen3-VL AI for analysis. Returns detected garments with category, style, pattern, season, colors. Results are cached by image hash — send ?force=true to bypass.
  *     tags: [Analyze]
  *     security:
  *       - bearerAuth: []
@@ -62,7 +73,8 @@ router.get("/", protect, async (req, res) => {
  *         name: force
  *         schema:
  *           type: string
- *         description: Set to "true" to bypass cache
+ *           enum: ["true"]
+ *         description: Set to "true" to bypass cached results
  *     requestBody:
  *       required: true
  *       content:
@@ -74,14 +86,71 @@ router.get("/", protect, async (req, res) => {
  *               image:
  *                 type: string
  *                 format: binary
- *                 description: Image file to analyze
+ *                 description: Image file to analyze (JPEG/PNG)
  *     responses:
  *       200:
- *         description: Analysis results (cached or fresh)
+ *         description: Analysis results (fresh or cached). If cached=true, the result was served from a previous analysis with the same image hash.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 analysis_id:
+ *                   type: string
+ *                   description: ID of the analysis
+ *                 garments:
+ *                   type: array
+ *                   description: Detected garment(s) with full attributes
+ *                   items:
+ *                     type: object
+ *                     properties:
+ *                       category:
+ *                         type: string
+ *                         enum: [top, bottom, outerwear, dress, footwear, accessory]
+ *                       specificType:
+ *                         type: string
+ *                       confidence:
+ *                         type: number
+ *                       colors:
+ *                         type: array
+ *                         items:
+ *                           type: object
+ *                           properties:
+ *                             color:
+ *                               type: string
+ *                             percentage:
+ *                               type: number
+ *                       style:
+ *                         type: string
+ *                         enum: [casual, smart-casual, formal, streetwear, sport]
+ *                       pattern:
+ *                         type: string
+ *                         enum: [solid, striped, checked, graphic, floral]
+ *                       season:
+ *                         type: array
+ *                         items:
+ *                           type: string
+ *                           enum: [spring, summer, autumn, winter]
+ *                       gender:
+ *                         type: string
+ *                         enum: [male, female, unisex]
+ *                 detectionType:
+ *                   type: string
+ *                   enum: [single, multiple, outfit, unknown]
+ *                 cached:
+ *                   type: boolean
+ *                   description: True if the result was served from cache (omitted for fresh analyses)
+ *                   example: true
  *       400:
  *         description: Image file is required
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
  *       401:
  *         description: Not authenticated
+ *       500:
+ *         description: Analysis failed
  */
 router.post("/", protect, upload.single("image"), async (req, res) => {
   try {
@@ -150,9 +219,23 @@ router.post("/", protect, upload.single("image"), async (req, res) => {
  *         description: Analysis ID
  *     responses:
  *       200:
- *         description: Analysis deleted
+ *         description: Analysis deleted successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
  *       404:
  *         description: Analysis not found
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ *       401:
+ *         description: Not authenticated
  */
 router.delete("/:id", protect, async (req, res) => {
   try {
@@ -180,6 +263,14 @@ router.delete("/:id", protect, async (req, res) => {
  *     responses:
  *       200:
  *         description: All analyses cleared
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
  *       401:
  *         description: Not authenticated
  */

@@ -49,6 +49,7 @@ function productToEngineItem(product) {
  * /api/matches:
  *   get:
  *     summary: Get match history for the user
+ *     description: Returns past matching results, including weather data if available.
  *     tags: [Matches]
  *     security:
  *       - bearerAuth: []
@@ -58,7 +59,8 @@ function productToEngineItem(product) {
  *         schema:
  *           type: integer
  *           default: 20
- *         description: Number of results (max 100)
+ *           maximum: 100
+ *         description: Number of results to return (max 100)
  *       - in: query
  *         name: skip
  *         schema:
@@ -67,7 +69,32 @@ function productToEngineItem(product) {
  *         description: Number of results to skip
  *     responses:
  *       200:
- *         description: Match history
+ *         description: Match history retrieved
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 history:
+ *                   type: array
+ *                   items:
+ *                     type: object
+ *                     properties:
+ *                       _id:
+ *                         type: string
+ *                       user_id:
+ *                         type: string
+ *                       source_garment:
+ *                         type: object
+ *                       matches:
+ *                         type: array
+ *                         items:
+ *                           type: object
+ *                       weather:
+ *                         $ref: '#/components/schemas/WeatherData'
+ *                       created_at:
+ *                         type: string
+ *                         format: date-time
  *       401:
  *         description: Not authenticated
  */
@@ -90,6 +117,7 @@ router.get("/", protect, async (req, res) => {
  * /api/matches:
  *   post:
  *     summary: Find matching items for a wardrobe item
+ *     description: Returns matching items from both the user's wardrobe and store products. Optionally accepts lat/lon for weather-aware sorting.
  *     tags: [Matches]
  *     security:
  *       - bearerAuth: []
@@ -103,14 +131,88 @@ router.get("/", protect, async (req, res) => {
  *             properties:
  *               wardrobe_item_id:
  *                 type: string
- *                 description: ID of the wardrobe item to match
+ *                 description: ID of the wardrobe item to find matches for
+ *                 example: "6658abc123def45678901234"
+ *               lat:
+ *                 type: number
+ *                 format: float
+ *                 description: Latitude for weather-aware matching (optional)
+ *                 example: 30.0444
+ *               lon:
+ *                 type: number
+ *                 format: float
+ *                 description: Longitude for weather-aware matching (optional)
+ *                 example: 31.2357
  *     responses:
  *       200:
  *         description: Matching items returned
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 matches:
+ *                   type: array
+ *                   items:
+ *                     type: object
+ *                     properties:
+ *                       item:
+ *                         type: object
+ *                         properties:
+ *                           id:
+ *                             type: string
+ *                           name:
+ *                             type: string
+ *                           category:
+ *                             type: string
+ *                           color:
+ *                             type: string
+ *                           style:
+ *                             type: string
+ *                           pattern:
+ *                             type: string
+ *                           season:
+ *                             type: array
+ *                             items:
+ *                               type: string
+ *                           source:
+ *                             type: string
+ *                             enum: [wardrobe, store]
+ *                           weatherScore:
+ *                             type: number
+ *                             nullable: true
+ *                           store_id:
+ *                             type: string
+ *                           price:
+ *                             type: number
+ *                           currency:
+ *                             type: string
+ *                           purchase_url:
+ *                             type: string
+ *                       score:
+ *                         type: integer
+ *                       reason:
+ *                         type: object
+ *                       raw:
+ *                         type: object
+ *                       explanation:
+ *                         type: string
+ *                 weather:
+ *                   $ref: '#/components/schemas/WeatherData'
  *       400:
  *         description: wardrobe_item_id is required
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
  *       404:
  *         description: Wardrobe item not found
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ *       401:
+ *         description: Not authenticated
  */
 router.post("/", protect, async (req, res) => {
   try {
