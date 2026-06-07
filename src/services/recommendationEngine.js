@@ -439,8 +439,6 @@ function validateOutfit(items) {
     return { valid: false, reason: "Must have exactly one bottom" };
   if ((counts[CATEGORY.SHOES] || 0) > 1)
     return { valid: false, reason: "More than one pair of shoes" };
-  if ((counts[CATEGORY.SHOES] || 0) === 0)
-    return { valid: false, reason: "Missing shoes" };
 
   for (let i = 0; i < items.length; i++) {
     for (let j = i + 1; j < items.length; j++) {
@@ -564,21 +562,22 @@ function generateOutfits(wardrobe) {
 
   for (const top of tops) {
     for (const bottom of bottoms) {
-      for (const shoe of shoes) {
+      const shoeCombos = shoes.length ? shoes : [null];
+      for (const shoe of shoeCombos) {
+        const baseItems = shoe ? [top, bottom, shoe] : [top, bottom];
         if (outerwears.length) {
           for (const ow of outerwears) {
-            const base = [top, bottom, shoe, ow];
+            const base = [...baseItems, ow];
             if (validateOutfit(base).valid) outfits.push(evaluateOutfit(base));
             for (const acc of accessories) {
-              const set = [top, bottom, shoe, ow, acc];
+              const set = [...base, acc];
               if (validateOutfit(set).valid) outfits.push(evaluateOutfit(set));
             }
           }
         } else {
-          const base = [top, bottom, shoe];
-          if (validateOutfit(base).valid) outfits.push(evaluateOutfit(base));
+          if (validateOutfit(baseItems).valid) outfits.push(evaluateOutfit(baseItems));
           for (const acc of accessories) {
-            const set = [top, bottom, shoe, acc];
+            const set = [...baseItems, acc];
             if (validateOutfit(set).valid) outfits.push(evaluateOutfit(set));
           }
         }

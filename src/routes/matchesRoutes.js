@@ -1,8 +1,10 @@
 const { Router } = require("express");
 const { findMatchesForItem } = require("../services/recommendationEngine");
 const WardrobeItem = require("../models/WardrobeItem");
+const Product = require("../models/Product");
 const MatchHistory = require("../models/MatchHistory");
 const protect = require("../middlewares/authMiddleware");
+const { getWeather, scoreItemWeatherRelevance } = require("../services/weather");
 
 const router = Router();
 
@@ -18,6 +20,27 @@ function toEngineItem(doc) {
     pattern: doc.pattern || "solid",
     season: doc.season || [],
     gender: doc.gender || "unisex",
+  };
+}
+
+function productToEngineItem(product) {
+  const colors = (product.color_tags || []).map((c) => ({ color: c, percentage: 100 }));
+  return {
+    id: `store_${product._id.toString()}`,
+    name: product.name,
+    type: product.name,
+    category: product.category === "acc" ? "accessory" : product.category,
+    colors,
+    color: colors[0]?.color || "unknown",
+    style: "casual",
+    pattern: "solid",
+    season: product.season_tags || [],
+    gender: "unisex",
+    _store: true,
+    store_id: product.store_id,
+    price: product.price,
+    currency: product.currency,
+    purchase_url: product.purchase_url,
   };
 }
 
@@ -91,7 +114,7 @@ router.get("/", protect, async (req, res) => {
  */
 router.post("/", protect, async (req, res) => {
   try {
-    const { wardrobe_item_id } = req.body;
+    const { wardrobe_item_id, lat, lon } = req.body;
     if (!wardrobe_item_id) {
       return res.status(400).json({ error: "wardrobe_item_id is required" });
     }
@@ -104,23 +127,65 @@ router.post("/", protect, async (req, res) => {
       return res.status(404).json({ error: "Wardrobe item not found" });
     }
 
-    const allItems = await WardrobeItem.find({
-      user_id: req.user._id,
-      _id: { $ne: sourceItem._id },
-    });
+    const [allItems, rawProducts] = await Promise.all([
+      WardrobeItem.find({ user_id: req.user._id, _id: { $ne: sourceItem._id } }),
+      Product.find({ is_active: true }),
+    ]);
+
+    let weatherData = null;
+    if (lat !== undefined && lon !== undefined) {
+      try {
+        weatherData = await getWeather(Number(lat), Number(lon));
+      } catch {
+        // weather fetch failed silently - return results without weather
+      }
+    }
 
     const uploadedItem = toEngineItem(sourceItem);
-    const wardrobe = allItems.map(toEngineItem);
+    const wardrobeCandidates = allItems.map(toEngineItem);
+    const productCandidates = rawProducts.map(productToEngineItem);
 
-    const matches = findMatchesForItem(uploadedItem, wardrobe);
+    const allCandidates = [...wardrobeCandidates, ...productCandidates];
+
+    const matches = findMatchesForItem(uploadedItem, allCandidates).map((m) => {
+      const candidate = m.item;
+      let weatherScore = null;
+      if (weatherData) {
+        weatherScore = scoreItemWeatherRelevance(candidate, weatherData);
+      }
+      const enrichedItem = {
+        ...candidate,
+        source: candidate._store ? "store" : "wardrobe",
+        weatherScore,
+        ...(candidate._store
+          ? {
+              store_id: candidate.store_id,
+              price: candidate.price,
+              currency: candidate.currency,
+              purchase_url: candidate.purchase_url,
+            }
+          : {}),
+      };
+      delete enrichedItem._store;
+      return { ...m, item: enrichedItem };
+    });
+
+    if (weatherData) {
+      matches.sort((a, b) => {
+        const aWs = a.weatherScore ?? 5;
+        const bWs = b.weatherScore ?? 5;
+        return bWs - aWs || b.score - a.score;
+      });
+    }
 
     await MatchHistory.create({
       user_id: req.user._id,
       source_garment: uploadedItem,
       matches,
+      weather: weatherData,
     });
 
-    res.json({ matches });
+    res.json({ matches, weather: weatherData });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }

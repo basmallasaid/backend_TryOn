@@ -7,6 +7,7 @@ const CONFIG = Object.freeze({
   DASHSCOPE_ENDPOINT: process.env.DASHSCOPE_ENDPOINT,
   GITHUB_MODELS_BASE_URL: "https://models.github.ai/inference",
   GITHUB_MODELS_MODEL: "gpt-4o-mini",
+  WEATHER_API_BASE: "https://api.open-meteo.com",
 });
 
 module.exports = { CONFIG };

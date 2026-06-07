@@ -14,6 +14,7 @@ const recommendationSchema = new mongoose.Schema({
     index: true,
   },
   outfits: { type: [outfitSchema], default: [] },
+  weather: { type: mongoose.Schema.Types.Mixed, default: null },
 }, {
   timestamps: { createdAt: "created_at", updatedAt: "updated_at" },
 });

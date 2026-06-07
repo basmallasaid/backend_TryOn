@@ -3,6 +3,7 @@ const { getRecommendations } = require("../services/recommendationEngine");
 const { getUserWardrobe } = require("../services/wardrobe");
 const Recommendation = require("../models/Recommendation");
 const protect = require("../middlewares/authMiddleware");
+const { getWeather, scoreItemWeatherRelevance } = require("../services/weather");
 
 const router = Router();
 
@@ -73,18 +74,50 @@ router.get("/", protect, async (req, res) => {
  */
 router.post("/", protect, async (req, res) => {
   try {
-    const wardrobe = await getUserWardrobe(req.user._id);
-    const limit = req.body?.limit || 10;
-    const outfits = getRecommendations(wardrobe, limit);
+    const { lat, lon, limit: reqLimit } = req.body;
+    const limit = reqLimit || 10;
 
-    if (outfits.length) {
+    const wardrobe = await getUserWardrobe(req.user._id);
+
+    let weatherData = null;
+    if (lat !== undefined && lon !== undefined) {
+      try {
+        weatherData = await getWeather(Number(lat), Number(lon));
+      } catch {
+        // weather fetch failed silently
+      }
+    }
+
+    let filteredWardrobe = wardrobe;
+    if (weatherData) {
+      filteredWardrobe = wardrobe.map((item) => {
+        const weatherScore = scoreItemWeatherRelevance(item, weatherData);
+        return { ...item.toObject?.() || item, weatherScore };
+      }).filter((item) => item.weatherScore >= 3);
+    }
+
+    const outfits = getRecommendations(filteredWardrobe, limit);
+    const enriched = outfits.map((outfit) => ({
+      ...outfit,
+      weather: weatherData
+        ? {
+            ...weatherData,
+            avgWeatherScore: Math.round(
+              outfit.items.reduce((s, i) => s + (i.weatherScore ?? 5), 0) / outfit.items.length
+            ),
+          }
+        : null,
+    }));
+
+    if (enriched.length) {
       await Recommendation.create({
         user_id: req.user._id,
-        outfits,
+        outfits: enriched,
+        weather: weatherData,
       });
     }
 
-    res.json({ outfits });
+    res.json({ outfits: enriched, weather: weatherData });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }

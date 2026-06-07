@@ -17,6 +17,7 @@ const matchHistorySchema = new mongoose.Schema({
   },
   source_garment: { type: mongoose.Schema.Types.Mixed, required: true },
   matches: { type: [matchItemSchema], default: [] },
+  weather: { type: mongoose.Schema.Types.Mixed, default: null },
 }, {
   timestamps: { createdAt: "created_at", updatedAt: "updated_at" },
 });

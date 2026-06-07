@@ -15,6 +15,7 @@ const matchesRoutes = require("./routes/matchesRoutes");
 const recommendationsRoutes = require("./routes/recommendationsRoutes");
 const virtualTryOnRoutes = require("./routes/virtualTryOnRoutes");
 const recycleRoutes = require("./routes/recycleRoutes");
+const weatherRoutes = require("./routes/weatherRoutes");
 
 const authRoutes = require("./routes/authRoutes");
 const userRoutes = require("./routes/userRoutes");
@@ -63,5 +64,6 @@ app.use("/api/matches", matchesRoutes);
 app.use("/api/recommendations", recommendationsRoutes);
 app.use("/api/virtual-tryon", virtualTryOnRoutes);
 app.use("/api/recycle", recycleRoutes);
+app.use("/api/weather", weatherRoutes);
 
 module.exports = app;
