@@ -17,6 +17,13 @@ const DEFAULT_TRYON_PROMPT = [
   'Dress the person from the first image in the garment from the second image.',
 ].join('\n');
 
+const OUTFIT_TRYON_PROMPT = [
+  'Use the first image as the person reference, the second image as the top garment,',
+  'and the third image as the bottom garment.',
+  '',
+  'Dress the person in the top and bottom garments shown in the second and third images.',
+].join('\n');
+
 function getApiKey(options = {}) {
   requireKey(options.apiKey, 'Kie AI API key');
   return options.apiKey;
@@ -55,11 +62,14 @@ async function uploadImage(imageDataUrl, options = {}) {
 
 async function createTask(
   personImageUrl,
-  garmentImageUrl,
+  garmentImageUrls,
   prompt,
   options = {},
 ) {
   const apiKey = getApiKey(options);
+  const imageInput = Array.isArray(garmentImageUrls)
+    ? [personImageUrl, ...garmentImageUrls]
+    : [personImageUrl, garmentImageUrls];
 
   const res = await fetch(`${KIE_API_BASE}/api/v1/jobs/createTask`, {
     method: 'POST',
@@ -71,7 +81,7 @@ async function createTask(
       model: 'nano-banana-2',
       input: {
         prompt,
-        image_input: [personImageUrl, garmentImageUrl],
+        image_input: imageInput,
         aspect_ratio: 'auto',
       },
     }),
@@ -184,4 +194,40 @@ async function generateVirtualTryOn({
   return result;
 }
 
-module.exports = { generateVirtualTryOn, DEFAULT_TRYON_PROMPT };
+async function generateOutfitTryOn({
+  personImage,
+  topImage,
+  bottomImage,
+  prompt = OUTFIT_TRYON_PROMPT,
+  onProgress,
+  ...options
+}) {
+  onProgress?.('Uploading person image…');
+  const personImageUrl = await uploadImage(personImage, options);
+
+  onProgress?.('Uploading top garment image…');
+  const topImageUrl = await uploadImage(topImage, options);
+
+  onProgress?.('Uploading bottom garment image…');
+  const bottomImageUrl = await uploadImage(bottomImage, options);
+
+  onProgress?.('Starting generation…');
+  const taskId = await createTask(
+    personImageUrl,
+    [topImageUrl, bottomImageUrl],
+    prompt,
+    options,
+  );
+
+  onProgress?.('Generating virtual try-on…');
+  const result = await pollTask(taskId, options);
+
+  return result;
+}
+
+module.exports = {
+  generateVirtualTryOn,
+  generateOutfitTryOn,
+  DEFAULT_TRYON_PROMPT,
+  OUTFIT_TRYON_PROMPT,
+};

@@ -44,7 +44,7 @@ const addFromAnalysis = async (userId, analysis, garmentIndex) => {
   const docs = garments.map((g, i) => ({
     user_id: userId,
     garment_index: garmentIndex !== undefined ? garmentIndex : i,
-    ...buildWardrobeItem(g, null),
+    ...buildWardrobeItem(g, analysis.image),
     analysis_id: analysis._id,
     source: "analysis",
   }));

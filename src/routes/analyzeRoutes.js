@@ -118,6 +118,7 @@ router.post("/", protect, upload.single("image"), async (req, res) => {
     const analysis = await Analysis.create({
       user_id: req.user._id,
       image_hash: imageHash,
+      image: dataUrl,
       garments: result.garments,
       detectionType: result.detectionType,
     });

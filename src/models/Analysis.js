@@ -19,6 +19,7 @@ const analysisSchema = new mongoose.Schema({
     index: true,
   },
   image_hash: { type: String, default: null, index: true },
+  image: { type: String, default: null },
   garments: { type: [garmentSnapshotSchema], default: [] },
   detectionType: {
     type: String,
