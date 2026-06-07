@@ -18,6 +18,11 @@ const userSchema = new mongoose.Schema(
 
     google_id: String,
 
+    userImage: {
+      type: String,
+      default: "null",
+    },
+
     expoPushToken: {
       type: String,
       default: "null",
