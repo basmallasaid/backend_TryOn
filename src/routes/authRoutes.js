@@ -233,11 +233,14 @@ router.get(
   }),
 
   (req, res) => {
-    res.status(200).json({
-      _id: req.user._id,
-      email: req.user.email,
-      token: generateToken(req.user._id),
-    });
+    console.log(`[Google Callback] User authenticated: ${req.user?._id} / ${req.user?.email}`);
+    const token = generateToken(req.user._id);
+    const fname = req.user.profile?.first_name || "";
+    const lname = req.user.profile?.last_name || "";
+    const image = req.user.userImage || "";
+    const url = `http://localhost:5173/auth/callback?token=${token}&_id=${req.user._id}&email=${req.user.email}&fname=${encodeURIComponent(fname)}&lname=${encodeURIComponent(lname)}&image=${encodeURIComponent(image)}`;
+    console.log(`[Google Callback] Redirecting to frontend callback`);
+    res.redirect(url);
   },
 );
 
