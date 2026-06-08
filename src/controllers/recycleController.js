@@ -4,6 +4,7 @@ const {
   generateRecycleImage,
   ensureProductShotSuffix,
   bufferToDataUrl,
+  translateUpcycleResult,
 } = require("../services/recycleService");
 
 exports.analyze = async (req, res) => {
@@ -23,6 +24,24 @@ exports.analyze = async (req, res) => {
 
     const result = await analyzeImages(imageDataUrls, files.length, githubToken);
 
+    // Translate all text fields to Arabic
+    let translatedResult;
+    try {
+      translatedResult = await translateUpcycleResult(result);
+      console.log("[Recycle] Translation to Arabic completed");
+    } catch (trErr) {
+      console.error("[Recycle] Translation failed, storing English only:", trErr.message);
+      translatedResult = {
+        ...result,
+        garment_analysis_ar: null,
+        upcycling_ideas: result.upcycling_ideas.map((idea) => ({
+          ...idea,
+          title_ar: null,
+          design_description_ar: null,
+        })),
+      };
+    }
+
     const session = await RecycleSession.create({
       user_id: req.user?._id || null,
       input_images: files.map((f) => ({
@@ -32,12 +51,15 @@ exports.analyze = async (req, res) => {
         size_bytes: f.size,
       })),
       image_count: files.length,
-      mode: result.mode,
-      garment_analysis: result.garment_analysis,
-      ideas: result.upcycling_ideas.map((idea) => ({
+      mode: translatedResult.mode,
+      garment_analysis: translatedResult.garment_analysis,
+      garment_analysis_ar: translatedResult.garment_analysis_ar,
+      ideas: translatedResult.upcycling_ideas.map((idea) => ({
         id: idea.id,
         title: idea.title,
+        title_ar: idea.title_ar,
         design_description: idea.design_description,
+        design_description_ar: idea.design_description_ar,
         image_prompt: idea.image_prompt,
         generated_image_url: null,
         generation_status: "pending",
@@ -51,12 +73,15 @@ exports.analyze = async (req, res) => {
     res.json({
       success: true,
       session_id: session._id,
-      mode: result.mode,
-      garment_analysis: result.garment_analysis,
-      ideas: session.ideas.map(({ id, title, design_description }) => ({
+      mode: translatedResult.mode,
+      garment_analysis: translatedResult.garment_analysis,
+      garment_analysis_ar: translatedResult.garment_analysis_ar,
+      ideas: session.ideas.map(({ id, title, title_ar, design_description, design_description_ar }) => ({
         id,
         title,
+        title_ar,
         design_description,
+        design_description_ar,
       })),
     });
   } catch (error) {
@@ -233,10 +258,13 @@ exports.getSession = async (req, res) => {
       mode: session.mode,
       image_count: session.image_count,
       garment_analysis: session.garment_analysis,
+      garment_analysis_ar: session.garment_analysis_ar,
       ideas: session.ideas.map((i) => ({
         id: i.id,
         title: i.title,
+        title_ar: i.title_ar,
         design_description: i.design_description,
+        design_description_ar: i.design_description_ar,
         generation_status: i.generation_status,
         generated_image_url: i.generated_image_url,
         generated_at: i.generated_at,

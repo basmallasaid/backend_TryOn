@@ -3,7 +3,9 @@ const mongoose = require("mongoose");
 const ideaSchema = new mongoose.Schema({
   id: Number,
   title: String,
+  title_ar: { type: String, default: null },
   design_description: String,
+  design_description_ar: { type: String, default: null },
   image_prompt: String,
   generated_image_url: { type: String, default: null },
   generation_status: {
@@ -26,6 +28,7 @@ const recycleSessionSchema = new mongoose.Schema({
   image_count: Number,
   mode: String,
   garment_analysis: String,
+  garment_analysis_ar: { type: String, default: null },
   ideas: [ideaSchema],
   status: {
     type: String,

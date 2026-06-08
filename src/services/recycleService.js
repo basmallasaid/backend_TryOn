@@ -1,4 +1,5 @@
 const { CONFIG } = require("../config/api");
+const { translateUpcycleResult } = require("./translationService");
 
 const PRODUCT_SHOT_SUFFIX = "Product shot, standalone garment, flat lay display, NO people, NO models, NO mannequins, clean studio background.";
 
@@ -228,4 +229,5 @@ module.exports = {
   generateRecycleImage,
   ensureProductShotSuffix,
   bufferToDataUrl,
+  translateUpcycleResult,
 };
