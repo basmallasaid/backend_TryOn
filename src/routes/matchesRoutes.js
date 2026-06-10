@@ -1,10 +1,60 @@
 const { Router } = require("express");
+const http = require("http");
+const https = require("https");
 const { findMatchesForItem } = require("../services/recommendationEngine");
 const WardrobeItem = require("../models/WardrobeItem");
 const Product = require("../models/Product");
 const MatchHistory = require("../models/MatchHistory");
 const protect = require("../middlewares/authMiddleware");
 const { getWeather, scoreItemWeatherRelevance } = require("../services/weather");
+const { analyzeClothing } = require("../services/analyze");
+const { findMatches } = require("../services/matching");
+const { getItemColors } = require("../services/normalizer");
+
+function analysisToEngineItem(garment) {
+  return {
+    id: "__uploaded__",
+    name: garment.specificType,
+    type: garment.specificType,
+    category: garment.category,
+    colors: garment.colors,
+    color: getItemColors(garment)[0]?.color || "unknown",
+    style: garment.style,
+    pattern: garment.pattern,
+    season: garment.season,
+    gender: garment.gender,
+  };
+}
+
+function imageUrlToDataUrl(url, maxRedirects = 3) {
+  return new Promise((resolve, reject) => {
+    const transport = url.startsWith("https") ? https : http;
+
+    const req = transport.get(url, (res) => {
+      if (res.statusCode >= 300 && res.statusCode < 400 && res.headers.location && maxRedirects > 0) {
+        req.destroy();
+        return resolve(imageUrlToDataUrl(res.headers.location, maxRedirects - 1));
+      }
+
+      if (res.statusCode !== 200) {
+        req.destroy();
+        return reject(new Error(`Failed to fetch image: HTTP ${res.statusCode}`));
+      }
+
+      const chunks = [];
+      res.on("data", (c) => chunks.push(c));
+      res.on("end", () => {
+        const buffer = Buffer.concat(chunks);
+        const contentType = res.headers["content-type"] || "image/jpeg";
+        resolve(`data:${contentType};base64,${buffer.toString("base64")}`);
+      });
+      res.on("error", reject);
+    });
+
+    req.on("error", reject);
+    req.setTimeout(15000, () => { req.destroy(); reject(new Error("Image fetch timed out")); });
+  });
+}
 
 const router = Router();
 
@@ -288,6 +338,164 @@ router.post("/", protect, async (req, res) => {
     });
 
     res.json({ matches, weather: weatherData });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+function wardrobeToEngineItem(doc) {
+  return {
+    id: doc._id.toString(),
+    name: doc.name || doc.type,
+    type: doc.type,
+    category: doc.category,
+    colors: doc.colors || [],
+    color: doc.color || "unknown",
+    style: doc.style || "casual",
+    pattern: doc.pattern || "solid",
+    season: doc.season || [],
+    gender: doc.gender || "unisex",
+    image: doc.image || null,
+  };
+}
+
+/**
+ * @swagger
+ * /api/matches/product/{productId}:
+ *   post:
+ *     summary: Find matching wardrobe items for a store product
+ *     tags: [Matches]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: productId
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: Matching wardrobe items
+ *       404:
+ *         description: Product not found
+ */
+router.post("/product/:productId", protect, async (req, res) => {
+  try {
+    const product = await Product.findById(req.params.productId);
+    if (!product) {
+      return res.status(404).json({ error: "Product not found" });
+    }
+
+    if (!product.images || !product.images.length) {
+      return res.status(400).json({ error: "Product has no images to analyze" });
+    }
+
+    const dataUrl = await imageUrlToDataUrl(product.images[0]);
+    const analysis = await analyzeClothing(dataUrl, {
+      HF_TOKEN: req.apiKeys?.HF_TOKEN,
+    });
+
+    if (!analysis.garments || !analysis.garments.length) {
+      return res.status(400).json({ error: "AI could not analyze this product image" });
+    }
+
+    const garment = analysis.garments[0];
+
+    const productItem = analysisToEngineItem(garment);
+    productItem.id = `store_${product._id.toString()}`;
+    productItem.price = product.price;
+    productItem.currency = product.currency;
+    productItem.purchase_url = product.purchase_url;
+    productItem._store = true;
+
+    const analyzedProduct = {
+      _id: product._id,
+      name: product.name,
+      description: product.description,
+      images: product.images,
+      price: product.price,
+      currency: product.currency,
+      purchase_url: product.purchase_url,
+      store_id: product.store_id,
+      ai_analysis: {
+        category: garment.category,
+        specificType: garment.specificType,
+        confidence: garment.confidence,
+        colors: garment.colors,
+        style: garment.style,
+        pattern: garment.pattern,
+        season: garment.season,
+        gender: garment.gender,
+      },
+    };
+
+    const wardrobeItems = await WardrobeItem.find({ user_id: req.user._id });
+    if (!wardrobeItems.length) {
+      return res.json({ matches: [], analyzedProduct });
+    }
+
+    const wardrobeCandidates = wardrobeItems.map(wardrobeToEngineItem);
+
+    const matches = findMatchesForItem(productItem, wardrobeCandidates).map((m) => ({
+      ...m,
+      item: { ...m.item, source: "wardrobe" },
+    }));
+
+    res.json({ matches, analyzedProduct });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+/**
+ * @swagger
+ * /api/matches/analysis/{analysisId}:
+ *   post:
+ *     summary: Find matching wardrobe items for an analyzed image
+ *     tags: [Matches]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: analysisId
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: Matching wardrobe items
+ *       404:
+ *         description: Analysis not found
+ */
+router.post("/analysis/:analysisId", protect, async (req, res) => {
+  try {
+    const Analysis = require("../models/Analysis");
+
+    const analysis = await Analysis.findOne({
+      _id: req.params.analysisId,
+      user_id: req.user._id,
+    });
+    if (!analysis) {
+      return res.status(404).json({ error: "Analysis not found" });
+    }
+
+    if (!analysis.garments || !analysis.garments.length) {
+      return res.status(400).json({ error: "No garments found in analysis" });
+    }
+
+    const wardrobeItems = await WardrobeItem.find({ user_id: req.user._id });
+
+    const rawMatches = findMatches(
+      { garments: analysis.garments },
+      wardrobeItems.map(wardrobeToEngineItem),
+    );
+
+    const matches = rawMatches.map((m) => ({
+      ...m,
+      item: { ...m.item, source: "wardrobe" },
+    }));
+
+    res.json({ matches });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
