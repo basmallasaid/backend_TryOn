@@ -62,6 +62,17 @@ const getSettings = async (req, res) => {
       return res.status(404).json({ message: "User not found" });
     }
 
+    // Fake auto-renewal — if subscription is active but end date passed, renew
+    if (
+      user.subscriptionStatus === "active" &&
+      user.subscriptionEndDate &&
+      new Date() > user.subscriptionEndDate
+    ) {
+      const now = new Date();
+      user.subscriptionEndDate = new Date(now.setMonth(now.getMonth() + 1));
+      await user.save();
+    }
+
     res.status(200).json({
       language: user.settings?.language || "en",
       notifications_enabled:
@@ -71,6 +82,7 @@ const getSettings = async (req, res) => {
       has_mobile_app: user.settings?.has_mobile_app || false,
       subscriptionId: user.subscriptionId || null,
       subscriptionStatus: user.subscriptionStatus || null,
+      subscriptionEndDate: user.subscriptionEndDate || null,
     });
   } catch (error) {
     res.status(500).json({ message: error.message });

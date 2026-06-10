@@ -111,6 +111,11 @@ const userSchema = new mongoose.Schema(
       enum: ["active", "canceled", "past_due", "incomplete", null],
       default: null,
     },
+
+    subscriptionEndDate: {
+      type: Date,
+      default: null,
+    },
   },
   {
     timestamps: {

@@ -34,8 +34,12 @@ const createSubscription = async (req, res) => {
     // Simulated payment — mark subscription as active immediately
     const fakeSubscriptionId = "sub_fake_" + crypto.randomBytes(12).toString("hex");
 
+    const now = new Date();
+    const endDate = new Date(now.setMonth(now.getMonth() + 1));
+
     user.subscriptionId = fakeSubscriptionId;
     user.subscriptionStatus = "active";
+    user.subscriptionEndDate = endDate;
     await user.save();
 
     res.status(201).json({
@@ -48,4 +52,35 @@ const createSubscription = async (req, res) => {
   }
 };
 
-module.exports = { createSubscription };
+const cancelSubscription = async (req, res) => {
+  try {
+    const { userId } = req.body;
+
+    if (!userId) {
+      return res.status(400).json({ message: "userId is required" });
+    }
+
+    const user = await User.findById(userId);
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    if (!user.subscriptionId || user.subscriptionStatus !== "active") {
+      return res.status(400).json({ message: "No active subscription to cancel" });
+    }
+
+    user.subscriptionStatus = "canceled";
+    await user.save();
+
+    res.status(200).json({
+      success: true,
+      message: "Subscription canceled",
+      subscriptionId: user.subscriptionId,
+      status: "canceled",
+    });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+module.exports = { createSubscription, cancelSubscription };
