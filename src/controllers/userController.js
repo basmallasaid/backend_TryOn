@@ -69,6 +69,8 @@ const getSettings = async (req, res) => {
           ? user.settings.notifications_enabled
           : true,
       has_mobile_app: user.settings?.has_mobile_app || false,
+      subscriptionId: user.subscriptionId || null,
+      subscriptionStatus: user.subscriptionStatus || null,
     });
   } catch (error) {
     res.status(500).json({ message: error.message });
