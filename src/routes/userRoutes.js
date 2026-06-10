@@ -7,6 +7,9 @@ const {
   updateNotifications,
   getUserById,
   deleteAccount,
+  addToLatestTryOn,
+  removeFromLatestTryOn,
+  getLatestTryOn,
 } = require("../controllers/userController");
 
 const protect = require("../middlewares/authMiddleware");
@@ -228,6 +231,125 @@ router.delete("/account", protect, deleteAccount);
  *       401:
  *         description: Not authenticated
  */
+/**
+ * @swagger
+ * /api/users/latest-tryon:
+ *   get:
+ *     summary: Get all latest try-on records for the authenticated user
+ *     tags: [Users]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: List of try-on records
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 latestTryOn:
+ *                   type: array
+ *                   items:
+ *                     type: object
+ *                     properties:
+ *                       _id:
+ *                         type: string
+ *                       imageUrl:
+ *                         type: string
+ *                       taskId:
+ *                         type: string
+ *                       model:
+ *                         type: string
+ *                       createdAt:
+ *                         type: string
+ *                         format: date-time
+ *       401:
+ *         description: Not authenticated
+ */
+router.get("/latest-tryon", protect, getLatestTryOn);
+
+/**
+ * @swagger
+ * /api/users/latest-tryon:
+ *   post:
+ *     summary: Add a new try-on record to the user's latest try-on list
+ *     tags: [Users]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [imageUrl]
+ *             properties:
+ *               imageUrl:
+ *                 type: string
+ *                 description: URL of the generated try-on image
+ *               taskId:
+ *                 type: string
+ *                 description: Task ID from the generation service
+ *               model:
+ *                 type: string
+ *                 description: AI model used for generation
+ *     responses:
+ *       201:
+ *         description: Added to latest try-on
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                 latestTryOn:
+ *                   type: array
+ *                   items:
+ *                     type: object
+ *       400:
+ *         description: imageUrl is required
+ *       401:
+ *         description: Not authenticated
+ */
+router.post("/latest-tryon", protect, addToLatestTryOn);
+
+/**
+ * @swagger
+ * /api/users/latest-tryon/{id}:
+ *   delete:
+ *     summary: Remove a try-on record from the user's latest try-on list
+ *     tags: [Users]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: The _id of the try-on record to remove
+ *     responses:
+ *       200:
+ *         description: Removed from latest try-on
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                 latestTryOn:
+ *                   type: array
+ *                   items:
+ *                     type: object
+ *       404:
+ *         description: Try-on record not found
+ *       401:
+ *         description: Not authenticated
+ */
+router.delete("/latest-tryon/:id", protect, removeFromLatestTryOn);
+
 router.get("/:id", protect, getUserById);
 
 module.exports = router;

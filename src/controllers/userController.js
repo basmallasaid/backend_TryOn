@@ -176,6 +176,70 @@ const deleteAccount = async (req, res) => {
   }
 };
 
+const addToLatestTryOn = async (req, res) => {
+  try {
+    const { imageUrl, taskId, model } = req.body;
+
+    if (!imageUrl) {
+      return res.status(400).json({ message: "imageUrl is required" });
+    }
+
+    const user = await User.findById(req.user._id);
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    user.latestTryOn.push({ imageUrl, taskId, model });
+    await user.save();
+
+    res.status(201).json({
+      message: "Added to latest try-on",
+      latestTryOn: user.latestTryOn,
+    });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+const removeFromLatestTryOn = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const user = await User.findById(req.user._id);
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    const item = user.latestTryOn.id(id);
+    if (!item) {
+      return res.status(404).json({ message: "Try-on record not found" });
+    }
+
+    item.deleteOne();
+    await user.save();
+
+    res.status(200).json({
+      message: "Removed from latest try-on",
+      latestTryOn: user.latestTryOn,
+    });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+const getLatestTryOn = async (req, res) => {
+  try {
+    const user = await User.findById(req.user._id);
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    res.status(200).json({ latestTryOn: user.latestTryOn });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
 module.exports = {
   updateProfile,
   getSettings,
@@ -183,4 +247,7 @@ module.exports = {
   updateNotifications,
   getUserById,
   deleteAccount,
+  addToLatestTryOn,
+  removeFromLatestTryOn,
+  getLatestTryOn,
 };

@@ -116,6 +116,15 @@ const userSchema = new mongoose.Schema(
       type: Date,
       default: null,
     },
+
+    latestTryOn: {
+      type: [{
+        imageUrl: { type: String, required: true },
+        taskId: { type: String },
+        model: { type: String },
+      }],
+      default: [],
+    },
   },
   {
     timestamps: {
