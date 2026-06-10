@@ -8,17 +8,10 @@ const protect = require("../middlewares/authMiddleware");
  * /api/avatars:
  *   post:
  *     summary: Create a new AI-generated avatar
- *     description: Creates an avatar based on detailed facial attributes using KIE image generation. Requires x-kie-api-key header.
+ *     description: Creates an avatar based on detailed facial attributes using KIE image generation. Requires KIE_API_key in .env.
  *     tags: [Avatars]
  *     security:
  *       - bearerAuth: []
- *     parameters:
- *       - in: header
- *         name: x-kie-api-key
- *         required: true
- *         schema:
- *           type: string
- *         description: KIE API key for image generation
  *     requestBody:
  *       required: true
  *       content:
@@ -26,47 +19,52 @@ const protect = require("../middlewares/authMiddleware");
  *           schema:
  *             type: object
  *             required:
- *               - age
- *               - height
- *               - weight
- *               - gender
- *               - skin_tone
- *               - face_shape
- *               - hair_color
- *               - eye_color
- *               - beard_style
- *               - facial_expression
+ *               - avatar
  *             properties:
- *               age:
- *                 type: string
- *                 example: "20y"
- *               height:
- *                 type: string
- *                 example: "175cm"
- *               weight:
- *                 type: string
- *                 example: "70kg"
- *               gender:
- *                 type: string
- *                 enum: [male, female]
- *               skin_tone:
- *                 type: string
- *                 enum: [very-light, light, medium, tan, brown, dark]
- *               face_shape:
- *                 type: string
- *                 enum: [oval, round, square, heart shaped, sharp jawline]
- *               hair_color:
- *                 type: string
- *                 enum: [black, dark-brown, brown, light-brown, blonde, red]
- *               eye_color:
- *                 type: string
- *                 enum: [brown eyes, black eyes, hazel eyes, green eyes, blue eyes]
- *               beard_style:
- *                 type: string
- *                 enum: [clean shave, stubble beard, trimmed beard, full beard, goatee]
- *               facial_expression:
- *                 type: string
- *                 enum: [smiling, serious, neutral, confident, thoughtful, angry, happy]
+ *               avatar:
+ *                 type: object
+ *                 required:
+ *                   - age
+ *                   - height
+ *                   - weight
+ *                   - gender
+ *                   - skin_tone
+ *                   - face_shape
+ *                   - hair_color
+ *                   - eye_color
+ *                   - beard_style
+ *                   - facial_expression
+ *                 properties:
+ *                   age:
+ *                     type: string
+ *                     example: "20y"
+ *                   height:
+ *                     type: string
+ *                     example: "175cm"
+ *                   weight:
+ *                     type: string
+ *                     example: "70kg"
+ *                   gender:
+ *                     type: string
+ *                     enum: [male, female]
+ *                   skin_tone:
+ *                     type: string
+ *                     enum: [very-light, light, medium, tan, brown, dark]
+ *                   face_shape:
+ *                     type: string
+ *                     enum: [oval, round, square, heart shaped, sharp jawline]
+ *                   hair_color:
+ *                     type: string
+ *                     enum: [black, dark-brown, brown, light-brown, blonde, red]
+ *                   eye_color:
+ *                     type: string
+ *                     enum: [brown eyes, black eyes, hazel eyes, green eyes, blue eyes]
+ *                   beard_style:
+ *                     type: string
+ *                     enum: [clean shave, stubble beard, trimmed beard, full beard, goatee]
+ *                   facial_expression:
+ *                     type: string
+ *                     enum: [smiling, serious, neutral, confident, thoughtful, angry, happy]
  *     responses:
  *       201:
  *         description: Avatar created successfully

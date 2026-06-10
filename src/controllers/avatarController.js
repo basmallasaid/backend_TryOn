@@ -27,9 +27,9 @@ const createAvatar = async (req, res) => {
     const prompt = `A photorealistic full-body image of an Egyptian ${age} ${gender} with ${skin_tone} skin, a ${face_shape} face, ${hair_color} hair, ${eye_color}, ${beard_style} beard, ${height} tall, ${weight}, and a ${facial_expression} expression. The person is wearing a white shirt and jeans. Front-facing, well-lit, white background, high-quality digital avatar. The entire body from head to toe must be visible.`;
 
     try {
-      const apiKey = req.apiKeys?.KIE_API_KEY;
+      const apiKey = process.env.KIE_API_key;
       if (!apiKey) {
-        throw new Error("KIE API key is required. Provide it via x-kie-api-key header.");
+        throw new Error("KIE API key is required. Set KIE_API_key in .env");
       }
       const imageUrl = await generateAvatarImage(prompt, apiKey);
       avatar.image_url = imageUrl;
