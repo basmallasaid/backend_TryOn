@@ -16,6 +16,13 @@ const upload = multer({ storage: multer.memoryStorage() });
  *     tags: [Virtual Try-On]
  *     security:
  *       - bearerAuth: []
+ *     parameters:
+ *       - in: header
+ *         name: x-kie-api-key
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: KIE API key for image generation
  *     requestBody:
  *       required: true
  *       content:
@@ -116,6 +123,19 @@ router.post(
  *     tags: [Virtual Try-On]
  *     security:
  *       - bearerAuth: []
+ *     parameters:
+ *       - in: header
+ *         name: x-kie-api-key
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: KIE API key for image generation
+ *       - in: header
+ *         name: x-hf-token
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Hugging Face token for garment classification
  *     requestBody:
  *       required: true
  *       content:
