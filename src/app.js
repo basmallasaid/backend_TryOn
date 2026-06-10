@@ -21,6 +21,7 @@ const notificationRoutes = require("./routes/notificationRoutes");
 
 const authRoutes = require("./routes/authRoutes");
 const userRoutes = require("./routes/userRoutes");
+const paymentRoutes = require("./routes/paymentRoutes");
 const storeRoutes = require("./routes/storeRoutes");
 const productRoutes = require("./routes/productRoutes");
 
@@ -52,6 +53,7 @@ app.use(passport.session());
 // User Routes
 app.use("/api/auth", authRoutes);
 app.use("/api/users", userRoutes);
+app.use("/api/payments", paymentRoutes);
 
 // Product routes
 app.use("/api/stores", storeRoutes);

@@ -95,6 +95,22 @@ const userSchema = new mongoose.Schema(
       type: [{ type: mongoose.Schema.Types.ObjectId, ref: "Avatar" }],
       default: [],
     },
+
+    stripeCustomerId: {
+      type: String,
+      default: null,
+    },
+
+    subscriptionId: {
+      type: String,
+      default: null,
+    },
+
+    subscriptionStatus: {
+      type: String,
+      enum: ["active", "canceled", "past_due", "incomplete", null],
+      default: null,
+    },
   },
   {
     timestamps: {
