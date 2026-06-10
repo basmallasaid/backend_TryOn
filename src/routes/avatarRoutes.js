@@ -27,6 +27,8 @@ const protect = require("../middlewares/authMiddleware");
  *             type: object
  *             required:
  *               - age
+ *               - height
+ *               - weight
  *               - gender
  *               - skin_tone
  *               - face_shape
@@ -37,7 +39,13 @@ const protect = require("../middlewares/authMiddleware");
  *             properties:
  *               age:
  *                 type: string
- *                 enum: [child, teenager, young adult, adult, old man, old woman]
+ *                 example: "20y"
+ *               height:
+ *                 type: string
+ *                 example: "175cm"
+ *               weight:
+ *                 type: string
+ *                 example: "70kg"
  *               gender:
  *                 type: string
  *                 enum: [male, female]
@@ -171,7 +179,13 @@ router.get("/:id", protect, getAvatarById);
  *             properties:
  *               age:
  *                 type: string
- *                 enum: [child, teenager, young adult, adult, old man, old woman]
+ *                 example: "20y"
+ *               height:
+ *                 type: string
+ *                 example: "175cm"
+ *               weight:
+ *                 type: string
+ *                 example: "70kg"
  *               gender:
  *                 type: string
  *                 enum: [male, female]

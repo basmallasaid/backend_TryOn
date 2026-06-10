@@ -10,7 +10,14 @@ const avatarSchema = new mongoose.Schema(
     },
     age: {
       type: String,
-      enum: ["child", "teenager", "young adult", "adult", "old man", "old woman"],
+      required: true,
+    },
+    height: {
+      type: String,
+      required: true,
+    },
+    weight: {
+      type: String,
       required: true,
     },
     gender: {
