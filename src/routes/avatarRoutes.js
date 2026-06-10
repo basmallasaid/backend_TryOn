@@ -32,7 +32,7 @@ const protect = require("../middlewares/authMiddleware");
  *               - gender
  *               - skin_tone
  *               - face_shape
- *               - hair_style
+ *               - hair_color
  *               - eye_color
  *               - beard_style
  *               - facial_expression
@@ -51,13 +51,13 @@ const protect = require("../middlewares/authMiddleware");
  *                 enum: [male, female]
  *               skin_tone:
  *                 type: string
- *                 enum: [pale, fair, olive, tan, brown, dark]
+ *                 enum: [very-light, light, medium, tan, brown, dark]
  *               face_shape:
  *                 type: string
  *                 enum: [oval, round, square, heart shaped, sharp jawline]
- *               hair_style:
+ *               hair_color:
  *                 type: string
- *                 enum: [short hair, curly hair, messy hair, fade haircut, buzz cut, long hair, wavy hair]
+ *                 enum: [black, dark-brown, brown, light-brown, blonde, red]
  *               eye_color:
  *                 type: string
  *                 enum: [brown eyes, black eyes, hazel eyes, green eyes, blue eyes]
@@ -191,13 +191,13 @@ router.get("/:id", protect, getAvatarById);
  *                 enum: [male, female]
  *               skin_tone:
  *                 type: string
- *                 enum: [pale, fair, olive, tan, brown, dark]
+ *                 enum: [very-light, light, medium, tan, brown, dark]
  *               face_shape:
  *                 type: string
  *                 enum: [oval, round, square, heart shaped, sharp jawline]
- *               hair_style:
+ *               hair_color:
  *                 type: string
- *                 enum: [short hair, curly hair, messy hair, fade haircut, buzz cut, long hair, wavy hair]
+ *                 enum: [black, dark-brown, brown, light-brown, blonde, red]
  *               eye_color:
  *                 type: string
  *                 enum: [brown eyes, black eyes, hazel eyes, green eyes, blue eyes]
