@@ -162,4 +162,108 @@ router.post("/send-test", protect, notificationController.sendToAll);
  */
 router.post("/tryon-ready", protect, notificationController.sendTryOnReady);
 
+/**
+ * @swagger
+ * /api/notifications/send-to-user:
+ *   post:
+ *     summary: Send a push notification to a specific user by email (all registered devices)
+ *     tags: [Notifications]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [email]
+ *             properties:
+ *               email:
+ *                 type: string
+ *                 format: email
+ *                 description: User email to send notification to
+ *                 example: "user@example.com"
+ *               title:
+ *                 type: string
+ *                 description: Notification title
+ *                 example: "New Match!"
+ *               message:
+ *                 type: string
+ *                 description: Notification body message
+ *                 example: "You have a new outfit match!"
+ *               data:
+ *                 type: object
+ *                 description: Optional custom data payload
+ *                 example: {"type": "match", "matchId": "abc123"}
+ *     responses:
+ *       200:
+ *         description: Notification sent successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Notification sent successfully"
+ *                 deviceCount:
+ *                   type: integer
+ *                   example: 2
+ *       400:
+ *         description: Email is required / No registered devices / Notifications disabled
+ *       401:
+ *         description: Not authenticated
+ *       404:
+ *         description: User not found
+ */
+router.post("/send-to-user", protect, notificationController.sendToUser);
+
+/**
+ * @swagger
+ * /api/notifications/broadcast:
+ *   post:
+ *     summary: Send a push notification to all users with registered devices
+ *     tags: [Notifications]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               title:
+ *                 type: string
+ *                 description: Notification title
+ *                 example: "TryOn Update"
+ *               message:
+ *                 type: string
+ *                 description: Notification body message
+ *                 example: "Check out the latest features!"
+ *               data:
+ *                 type: object
+ *                 description: Optional custom data payload
+ *                 example: {"type": "update", "version": "2.0"}
+ *     responses:
+ *       200:
+ *         description: Broadcast sent successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Broadcast sent successfully"
+ *                 deviceCount:
+ *                   type: integer
+ *                   example: 150
+ *       400:
+ *         description: No registered devices found
+ *       401:
+ *         description: Not authenticated
+ */
+router.post("/broadcast", protect, notificationController.broadcast);
+
 module.exports = router;
