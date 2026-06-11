@@ -205,6 +205,156 @@ router.post("/", protect, upload.single("image"), async (req, res) => {
 /**
  * @swagger
  * /api/analyze/{id}:
+ *   get:
+ *     summary: Get a single analysis by ID
+ *     tags: [Analyze]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Analysis ID
+ *     responses:
+ *       200:
+ *         description: Analysis details
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 analysis:
+ *                   $ref: '#/components/schemas/Analysis'
+ *       404:
+ *         description: Analysis not found
+ *       401:
+ *         description: Not authenticated
+ */
+router.get("/:id", protect, async (req, res) => {
+  try {
+    const analysis = await Analysis.findOne({
+      _id: req.params.id,
+      user_id: req.user._id,
+    });
+    if (!analysis) {
+      return res.status(404).json({ error: "Analysis not found" });
+    }
+    res.json({ analysis });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+/**
+ * @swagger
+ * /api/analyze/{id}:
+ *   put:
+ *     summary: Edit/update an analysis by ID
+ *     tags: [Analyze]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Analysis ID
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               detectionType:
+ *                 type: string
+ *                 enum: [single, multiple, outfit, unknown]
+ *               garments:
+ *                 type: array
+ *                 items:
+ *                   type: object
+ *                   properties:
+ *                     category:
+ *                       type: string
+ *                       enum: [top, bottom, outerwear, dress, footwear, accessory]
+ *                     specificType:
+ *                       type: string
+ *                     confidence:
+ *                       type: number
+ *                     colors:
+ *                       type: array
+ *                       items:
+ *                         type: object
+ *                         properties:
+ *                           color:
+ *                             type: string
+ *                           percentage:
+ *                             type: number
+ *                     style:
+ *                       type: string
+ *                       enum: [casual, smart-casual, formal, streetwear, sport]
+ *                     pattern:
+ *                       type: string
+ *                       enum: [solid, striped, checked, graphic, floral]
+ *                     season:
+ *                       type: array
+ *                       items:
+ *                         type: string
+ *                         enum: [spring, summer, autumn, winter]
+ *                     gender:
+ *                       type: string
+ *                       enum: [male, female, unisex]
+ *     responses:
+ *       200:
+ *         description: Analysis updated successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 analysis:
+ *                   $ref: '#/components/schemas/Analysis'
+ *       404:
+ *         description: Analysis not found
+ *       401:
+ *         description: Not authenticated
+ */
+router.put("/:id", protect, async (req, res) => {
+  try {
+    const updates = {};
+    if (req.body.detectionType !== undefined) {
+      updates.detectionType = req.body.detectionType;
+    }
+    if (req.body.garments !== undefined) {
+      updates.garments = req.body.garments;
+    }
+    if (req.body.image !== undefined) {
+      updates.image = req.body.image;
+    }
+
+    const analysis = await Analysis.findOneAndUpdate(
+      { _id: req.params.id, user_id: req.user._id },
+      { $set: updates },
+      { new: true, runValidators: true },
+    );
+    if (!analysis) {
+      return res.status(404).json({ error: "Analysis not found" });
+    }
+    res.json({ success: true, analysis });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+/**
+ * @swagger
+ * /api/analyze/{id}:
  *   delete:
  *     summary: Delete a single analysis by ID
  *     tags: [Analyze]

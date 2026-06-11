@@ -1,25 +1,20 @@
 const crypto = require("crypto");
 const User = require("../models/User");
 
-const createSubscription = async (req, res) => {
+const stripe = process.env.STRIPE_SECRET_KEY
+  ? require("stripe")(process.env.STRIPE_SECRET_KEY)
+  : null;
+
+const createCheckoutSession = async (req, res) => {
   try {
-    const { userId, cardNumber, expiry, cvv, plan } = req.body;
-
-    if (!userId || !cardNumber || !expiry || !cvv || !plan) {
-      return res.status(400).json({ message: "All fields are required" });
+    if (!stripe) {
+      return res.status(500).json({ message: "Stripe not configured" });
     }
 
-    const cleanedCard = cardNumber.replace(/\s+/g, "");
-    if (!/^\d{16}$/.test(cleanedCard)) {
-      return res.status(400).json({ message: "Card number must be 16 digits" });
-    }
+    const { userId, plan } = req.body;
 
-    if (!/^\d{2}\/\d{2}$/.test(expiry)) {
-      return res.status(400).json({ message: "Expiry must be in MM/YY format" });
-    }
-
-    if (!/^\d{3}$/.test(cvv)) {
-      return res.status(400).json({ message: "CVV must be 3 digits" });
+    if (!userId || !plan) {
+      return res.status(400).json({ message: "userId and plan are required" });
     }
 
     if (plan !== "pro") {
@@ -31,22 +26,28 @@ const createSubscription = async (req, res) => {
       return res.status(404).json({ message: "User not found" });
     }
 
-    // Simulated payment — mark subscription as active immediately
-    const fakeSubscriptionId = "sub_fake_" + crypto.randomBytes(12).toString("hex");
+    let stripeCustomerId = user.stripeCustomerId;
 
-    const now = new Date();
-    const endDate = new Date(now.setMonth(now.getMonth() + 1));
+    if (!stripeCustomerId) {
+      const customer = await stripe.customers.create({
+        email: user.email,
+        metadata: { userId: user._id.toString() },
+      });
+      stripeCustomerId = customer.id;
+      user.stripeCustomerId = stripeCustomerId;
+      await user.save();
+    }
 
-    user.subscriptionId = fakeSubscriptionId;
-    user.subscriptionStatus = "active";
-    user.subscriptionEndDate = endDate;
-    await user.save();
-
-    res.status(201).json({
-      success: true,
-      subscriptionId: fakeSubscriptionId,
-      status: "active",
+    const session = await stripe.checkout.sessions.create({
+      customer: stripeCustomerId,
+      mode: "subscription",
+      line_items: [{ price: process.env.STRIPE_PRO_PRICE_ID, quantity: 1 }],
+      success_url: `${process.env.CLIENT_URL}/pricing?success=true`,
+      cancel_url: `${process.env.CLIENT_URL}/pricing?canceled=true`,
+      metadata: { userId: user._id.toString() },
     });
+
+    res.status(200).json({ url: session.url });
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
@@ -69,6 +70,14 @@ const cancelSubscription = async (req, res) => {
       return res.status(400).json({ message: "No active subscription to cancel" });
     }
 
+    if (stripe && user.subscriptionId.startsWith("sub_") && !user.subscriptionId.startsWith("sub_fake_")) {
+      try {
+        await stripe.subscriptions.cancel(user.subscriptionId);
+      } catch {
+        // Stripe cancel failed — still mark as canceled locally
+      }
+    }
+
     user.subscriptionStatus = "canceled";
     await user.save();
 
@@ -83,4 +92,4 @@ const cancelSubscription = async (req, res) => {
   }
 };
 
-module.exports = { createSubscription, cancelSubscription };
+module.exports = { createCheckoutSession, cancelSubscription };
