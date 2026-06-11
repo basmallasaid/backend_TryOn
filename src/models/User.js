@@ -95,6 +95,55 @@ const userSchema = new mongoose.Schema(
       type: [{ type: mongoose.Schema.Types.ObjectId, ref: "Avatar" }],
       default: [],
     },
+
+    stripeCustomerId: {
+      type: String,
+      default: null,
+    },
+
+    subscriptionId: {
+      type: String,
+      default: null,
+    },
+
+    subscriptionStatus: {
+      type: String,
+      enum: ["active", "canceled", "past_due", "incomplete", null],
+      default: null,
+    },
+
+    subscriptionEndDate: {
+      type: Date,
+      default: null,
+    },
+
+    darkMode: {
+      type: Boolean,
+      default: false,
+    },
+
+    favorites: [
+      {
+        itemType: {
+          type: String,
+          enum: ["PRODUCT", "WARDROBE", "TRYON"],
+          required: true,
+        },
+        itemId: {
+          type: mongoose.Schema.Types.ObjectId,
+          required: true,
+        },
+      },
+    ],
+
+    latestTryOn: {
+      type: [{
+        imageUrl: { type: String, required: true },
+        taskId: { type: String },
+        model: { type: String },
+      }],
+      default: [],
+    },
   },
   {
     timestamps: {

@@ -21,6 +21,8 @@ const notificationRoutes = require("./routes/notificationRoutes");
 
 const authRoutes = require("./routes/authRoutes");
 const userRoutes = require("./routes/userRoutes");
+const paymentRoutes = require("./routes/paymentRoutes");
+const webhookRoutes = require("./routes/webhookRoutes");
 const storeRoutes = require("./routes/storeRoutes");
 const productRoutes = require("./routes/productRoutes");
 
@@ -38,6 +40,10 @@ app.get("/api-docs.json", (req, res) => {
 
 // Middleware
 app.use(cors());
+
+// Webhook route must be before express.json() for raw body parsing
+app.use("/api/webhooks", webhookRoutes);
+
 app.use(express.json());
 app.use(
   session({
@@ -52,6 +58,7 @@ app.use(passport.session());
 // User Routes
 app.use("/api/auth", authRoutes);
 app.use("/api/users", userRoutes);
+app.use("/api/payments", paymentRoutes);
 
 // Product routes
 app.use("/api/stores", storeRoutes);

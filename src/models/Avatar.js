@@ -10,7 +10,14 @@ const avatarSchema = new mongoose.Schema(
     },
     age: {
       type: String,
-      enum: ["child", "teenager", "young adult", "adult", "old man", "old woman"],
+      required: true,
+    },
+    height: {
+      type: String,
+      required: true,
+    },
+    weight: {
+      type: String,
       required: true,
     },
     gender: {
@@ -20,7 +27,7 @@ const avatarSchema = new mongoose.Schema(
     },
     skin_tone: {
       type: String,
-      enum: ["pale", "fair", "olive", "tan", "brown", "dark"],
+      enum: ["very-light", "light", "medium", "tan", "brown", "dark"],
       required: true,
     },
     face_shape: {
@@ -28,17 +35,9 @@ const avatarSchema = new mongoose.Schema(
       enum: ["oval", "round", "square", "heart shaped", "sharp jawline"],
       required: true,
     },
-    hair_style: {
+    hair_color: {
       type: String,
-      enum: [
-        "short hair",
-        "curly hair",
-        "messy hair",
-        "fade haircut",
-        "buzz cut",
-        "long hair",
-        "wavy hair",
-      ],
+      enum: ["black", "dark-brown", "brown", "light-brown", "blonde", "red"],
       required: true,
     },
     eye_color: {

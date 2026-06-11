@@ -12,7 +12,7 @@ const upload = multer({ storage: multer.memoryStorage() });
  * /api/virtual-tryon:
  *   post:
  *     summary: Generate a virtual try-on (single garment)
- *     description: Upload a person image and a garment image. Uses KIE nano-banana-2 model to generate a photo-realistic try-on. Requires KIE API key in x-kie-api-key header.
+ *     description: Upload a person image and a garment image. Uses KIE nano-banana-2 model to generate a photo-realistic try-on.
  *     tags: [Virtual Try-On]
  *     security:
  *       - bearerAuth: []
@@ -97,7 +97,7 @@ router.post(
         personImage: toDataUrl(personFile),
         garmentImage: toDataUrl(garmentFile),
         prompt: req.body?.prompt || undefined,
-        apiKey: req.apiKeys?.KIE_API_KEY,
+        apiKey: req.apiKeys?.KIE_API_KEY || process.env.KIE_API_key,
       });
 
       res.json(result);
@@ -112,7 +112,7 @@ router.post(
  * /api/virtual-tryon/outfit:
  *   post:
  *     summary: Generate a virtual try-on with top AND bottom garments
- *     description: Upload a person image, a top garment, and a bottom garment. Validates garment categories via AI, then generates a try-on with both garments. Requires HF_TOKEN in x-hf-token header for validation, and KIE_API_KEY in x-kie-api-key header.
+ *     description: Upload a person image, a top garment, and a bottom garment. Validates garment categories via AI, then generates a try-on with both garments.
  *     tags: [Virtual Try-On]
  *     security:
  *       - bearerAuth: []
@@ -199,7 +199,7 @@ router.post(
       const toDataUrl = (file) =>
         `data:${file.mimetype};base64,${file.buffer.toString("base64")}`;
 
-      const hfToken = req.apiKeys?.HF_TOKEN;
+      const hfToken = req.apiKeys?.HF_TOKEN || process.env.HF_TOKEN;
       if (!hfToken) {
         return res
           .status(400)
@@ -241,7 +241,7 @@ router.post(
         topImage: toDataUrl(finalTop),
         bottomImage: toDataUrl(finalBottom),
         prompt: req.body?.prompt || undefined,
-        apiKey: req.apiKeys?.KIE_API_KEY,
+        apiKey: req.apiKeys?.KIE_API_KEY || process.env.KIE_API_key,
       });
 
       res.json(result);

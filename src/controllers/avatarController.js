@@ -4,9 +4,9 @@ const { generateAvatarImage } = require("../services/imageGenerationService");
 
 const createAvatar = async (req, res) => {
   try {
-    const { age, gender, skin_tone, face_shape, hair_style, eye_color, beard_style, facial_expression } = req.body;
+    const { age, gender, skin_tone, face_shape, hair_color, eye_color, beard_style, facial_expression, height, weight } = req.body;
 
-    if (!age || !gender || !skin_tone || !face_shape || !hair_style || !eye_color || !beard_style || !facial_expression) {
+    if (!age || !gender || !skin_tone || !face_shape || !hair_color || !eye_color || !beard_style || !facial_expression || !height || !weight) {
       return res.status(400).json({ message: "All avatar attributes are required" });
     }
 
@@ -16,18 +16,20 @@ const createAvatar = async (req, res) => {
       gender,
       skin_tone,
       face_shape,
-      hair_style,
+      hair_color,
       eye_color,
       beard_style,
       facial_expression,
+      height,
+      weight,
     });
 
-    const prompt = `A photorealistic full-body image of a ${age} ${gender} with ${skin_tone} skin, a ${face_shape} face, ${hair_style}, ${eye_color}, ${beard_style} beard, and a ${facial_expression} expression. Front-facing, well-lit, neutral background, high-quality digital avatar. The entire body from head to toe must be visible.`;
+    const prompt = `A photorealistic full-body image of an Egyptian ${age} ${gender} with ${skin_tone} skin, a ${face_shape} face, ${hair_color} hair, ${eye_color}, ${beard_style} beard, ${height} tall, ${weight}, and a ${facial_expression} expression. The person is wearing a white shirt and jeans. Front-facing, well-lit, white background, high-quality digital avatar. The entire body from head to toe must be visible.`;
 
     try {
-      const apiKey = req.apiKeys?.KIE_API_KEY;
+      const apiKey = process.env.KIE_API_key;
       if (!apiKey) {
-        throw new Error("KIE API key is required. Provide it via x-kie-api-key header.");
+        throw new Error("KIE API key is required. Set KIE_API_key in .env");
       }
       const imageUrl = await generateAvatarImage(prompt, apiKey);
       avatar.image_url = imageUrl;
@@ -68,7 +70,7 @@ const getAvatarById = async (req, res) => {
 
 const updateAvatar = async (req, res) => {
   try {
-    const allowedFields = ["age", "gender", "skin_tone", "face_shape", "hair_style", "eye_color", "beard_style", "facial_expression"];
+    const allowedFields = ["age", "gender", "skin_tone", "face_shape", "hair_color", "eye_color", "beard_style", "facial_expression", "height", "weight"];
     const updateData = {};
     for (const field of allowedFields) {
       if (req.body[field] !== undefined) updateData[field] = req.body[field];
