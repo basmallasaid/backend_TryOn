@@ -47,11 +47,16 @@ const productSchema = new mongoose.Schema(
     },
     try_on_enabled: {
       type: Boolean,
-      default: false,
+      default: true,
     },
     is_active: {
       type: Boolean,
       default: true,
+    },
+    analysis_id: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Analysis",
+      default: null,
     },
   },
   {

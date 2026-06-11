@@ -45,11 +45,13 @@ const createProduct = async (req, res) => {
       price,
       currency: currency || "USD",
       purchase_url,
-      try_on_enabled: try_on_enabled !== undefined ? try_on_enabled : false,
+      try_on_enabled: try_on_enabled !== undefined ? try_on_enabled : true,
       is_active: is_active !== undefined ? is_active : true,
     };
 
-    const newProduct = await productService.createProduct(productData);
+    const newProduct = await productService.createProduct(productData, {
+      HF_TOKEN: req.apiKeys?.HF_TOKEN,
+    });
 
     return res.status(201).json({
       message: "Product created successfully",

@@ -35,7 +35,7 @@ const systemPrompt = [
 ].join("\n");
 
 async function classifyImage(imageDataUrl, options = {}) {
-  const HF_TOKEN = options.HF_TOKEN ?? CONFIG.HF_TOKEN;
+  const HF_TOKEN = options.HF_TOKEN || CONFIG.HF_TOKEN;
   const MODEL_URL = options.MODEL_URL ?? CONFIG.MODEL_URL;
   const MODEL_ID = options.MODEL_ID ?? CONFIG.MODEL_ID;
 

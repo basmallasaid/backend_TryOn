@@ -15,7 +15,19 @@ const analysisSchema = new mongoose.Schema({
   user_id: {
     type: mongoose.Schema.Types.ObjectId,
     ref: "User",
-    required: true,
+    default: null,
+    index: true,
+  },
+  product_id: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: "Product",
+    default: null,
+    index: true,
+  },
+  store_id: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: "Store",
+    default: null,
     index: true,
   },
   image_hash: { type: String, default: null, index: true },

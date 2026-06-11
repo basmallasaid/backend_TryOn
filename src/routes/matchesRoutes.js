@@ -1,14 +1,12 @@
 const { Router } = require("express");
-const http = require("http");
-const https = require("https");
 const { findMatchesForItem } = require("../services/recommendationEngine");
 const WardrobeItem = require("../models/WardrobeItem");
 const Product = require("../models/Product");
+const Analysis = require("../models/Analysis");
 const MatchHistory = require("../models/MatchHistory");
 const protect = require("../middlewares/authMiddleware");
 const { getWeather, scoreItemWeatherRelevance } = require("../services/weather");
-const { analyzeClothing } = require("../services/analyze");
-const { findMatches } = require("../services/matching");
+const { analyzeClothing, imageUrlToDataUrl } = require("../services/analyze");
 const { getItemColors } = require("../services/normalizer");
 
 function analysisToEngineItem(garment) {
@@ -24,36 +22,6 @@ function analysisToEngineItem(garment) {
     season: garment.season,
     gender: garment.gender,
   };
-}
-
-function imageUrlToDataUrl(url, maxRedirects = 3) {
-  return new Promise((resolve, reject) => {
-    const transport = url.startsWith("https") ? https : http;
-
-    const req = transport.get(url, (res) => {
-      if (res.statusCode >= 300 && res.statusCode < 400 && res.headers.location && maxRedirects > 0) {
-        req.destroy();
-        return resolve(imageUrlToDataUrl(res.headers.location, maxRedirects - 1));
-      }
-
-      if (res.statusCode !== 200) {
-        req.destroy();
-        return reject(new Error(`Failed to fetch image: HTTP ${res.statusCode}`));
-      }
-
-      const chunks = [];
-      res.on("data", (c) => chunks.push(c));
-      res.on("end", () => {
-        const buffer = Buffer.concat(chunks);
-        const contentType = res.headers["content-type"] || "image/jpeg";
-        resolve(`data:${contentType};base64,${buffer.toString("base64")}`);
-      });
-      res.on("error", reject);
-    });
-
-    req.on("error", reject);
-    req.setTimeout(15000, () => { req.destroy(); reject(new Error("Image fetch timed out")); });
-  });
 }
 
 const router = Router();
@@ -73,19 +41,20 @@ function toEngineItem(doc) {
   };
 }
 
-function productToEngineItem(product) {
+function productToEngineItem(product, analysis) {
   const colors = (product.color_tags || []).map((c) => ({ color: c, percentage: 100 }));
+  const garment = analysis?.garments?.[0];
   return {
     id: `store_${product._id.toString()}`,
     name: product.name,
     type: product.name,
     category: product.category === "acc" ? "accessory" : product.category,
-    colors,
-    color: colors[0]?.color || "unknown",
-    style: "casual",
-    pattern: "solid",
-    season: product.season_tags || [],
-    gender: "unisex",
+    colors: garment?.colors || colors,
+    color: garment ? (garment.colors?.[0]?.color || "unknown") : (colors[0]?.color || "unknown"),
+    style: garment?.style || "casual",
+    pattern: garment?.pattern || "solid",
+    season: garment?.season || product.season_tags || [],
+    gender: garment?.gender || "unisex",
     _store: true,
     store_id: product.store_id,
     price: product.price,
@@ -293,9 +262,20 @@ router.post("/", protect, async (req, res) => {
       }
     }
 
+    const productIdsWithAnalysis = rawProducts.filter((p) => p.analysis_id).map((p) => p.analysis_id);
+    const productAnalyses = productIdsWithAnalysis.length
+      ? await Analysis.find({ _id: { $in: productIdsWithAnalysis } })
+      : [];
+    const analysisMap = {};
+    for (const a of productAnalyses) {
+      if (a.product_id) analysisMap[a.product_id.toString()] = a;
+    }
+
     const uploadedItem = toEngineItem(sourceItem);
     const wardrobeCandidates = allItems.map(toEngineItem);
-    const productCandidates = rawProducts.map(productToEngineItem);
+    const productCandidates = rawProducts.map((p) =>
+      productToEngineItem(p, analysisMap[p._id.toString()])
+    );
 
     const allCandidates = [...wardrobeCandidates, ...productCandidates];
 
@@ -386,20 +366,45 @@ router.post("/product/:productId", protect, async (req, res) => {
       return res.status(404).json({ error: "Product not found" });
     }
 
-    if (!product.images || !product.images.length) {
-      return res.status(400).json({ error: "Product has no images to analyze" });
+    let analysis;
+    let garment;
+
+    if (product.analysis_id) {
+      const savedAnalysis = await Analysis.findById(product.analysis_id);
+      if (savedAnalysis && savedAnalysis.garments && savedAnalysis.garments.length) {
+        analysis = savedAnalysis;
+        garment = savedAnalysis.garments[0];
+      }
     }
 
-    const dataUrl = await imageUrlToDataUrl(product.images[0]);
-    const analysis = await analyzeClothing(dataUrl, {
-      HF_TOKEN: req.apiKeys?.HF_TOKEN,
-    });
+    if (!garment) {
+      if (!product.images || !product.images.length) {
+        return res.status(400).json({ error: "Product has no images to analyze" });
+      }
 
-    if (!analysis.garments || !analysis.garments.length) {
-      return res.status(400).json({ error: "AI could not analyze this product image" });
+      const dataUrl = await imageUrlToDataUrl(product.images[0]);
+      const freshAnalysis = await analyzeClothing(dataUrl, {
+        HF_TOKEN: req.apiKeys?.HF_TOKEN,
+      });
+
+      if (!freshAnalysis.garments || !freshAnalysis.garments.length) {
+        return res.status(400).json({ error: "AI could not analyze this product image" });
+      }
+
+      analysis = await Analysis.create({
+        product_id: product._id,
+        store_id: product.store_id,
+        image_hash: null,
+        image: dataUrl,
+        garments: freshAnalysis.garments,
+        detectionType: freshAnalysis.detectionType,
+      });
+
+      product.analysis_id = analysis._id;
+      await product.save();
+
+      garment = freshAnalysis.garments[0];
     }
-
-    const garment = analysis.garments[0];
 
     const productItem = analysisToEngineItem(garment);
     productItem.id = `store_${product._id.toString()}`;
@@ -451,7 +456,8 @@ router.post("/product/:productId", protect, async (req, res) => {
  * @swagger
  * /api/matches/analysis/{analysisId}:
  *   post:
- *     summary: Find matching wardrobe items for an analyzed image
+ *     summary: Find matching items for an analyzed image
+ *     description: Returns matches from both the user's wardrobe and store products
  *     tags: [Matches]
  *     security:
  *       - bearerAuth: []
@@ -461,16 +467,24 @@ router.post("/product/:productId", protect, async (req, res) => {
  *         required: true
  *         schema:
  *           type: string
+ *     requestBody:
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               lat:
+ *                 type: number
+ *               lon:
+ *                 type: number
  *     responses:
  *       200:
- *         description: Matching wardrobe items
+ *         description: Matching items
  *       404:
  *         description: Analysis not found
  */
 router.post("/analysis/:analysisId", protect, async (req, res) => {
   try {
-    const Analysis = require("../models/Analysis");
-
     const analysis = await Analysis.findOne({
       _id: req.params.analysisId,
       user_id: req.user._id,
@@ -483,19 +497,78 @@ router.post("/analysis/:analysisId", protect, async (req, res) => {
       return res.status(400).json({ error: "No garments found in analysis" });
     }
 
-    const wardrobeItems = await WardrobeItem.find({ user_id: req.user._id });
+    const { lat, lon } = req.body;
 
-    const rawMatches = findMatches(
-      { garments: analysis.garments },
-      wardrobeItems.map(wardrobeToEngineItem),
+    let weatherData = null;
+    if (lat !== undefined && lon !== undefined) {
+      try {
+        weatherData = await getWeather(Number(lat), Number(lon));
+      } catch {
+        // weather fetch failed silently
+      }
+    }
+
+    const [wardrobeItems, rawProducts] = await Promise.all([
+      WardrobeItem.find({ user_id: req.user._id }),
+      Product.find({ is_active: true }),
+    ]);
+
+    const productIdsWithAnalysis = rawProducts.filter((p) => p.analysis_id).map((p) => p.analysis_id);
+    const productAnalyses = productIdsWithAnalysis.length
+      ? await Analysis.find({ _id: { $in: productIdsWithAnalysis } })
+      : [];
+    const analysisMap = {};
+    for (const a of productAnalyses) {
+      if (a.product_id) analysisMap[a.product_id.toString()] = a;
+    }
+
+    const uploadedItem = analysisToEngineItem(analysis.garments[0]);
+    const wardrobeCandidates = wardrobeItems.map(wardrobeToEngineItem);
+    const productCandidates = rawProducts.map((p) =>
+      productToEngineItem(p, analysisMap[p._id.toString()])
     );
 
-    const matches = rawMatches.map((m) => ({
-      ...m,
-      item: { ...m.item, source: "wardrobe" },
-    }));
+    const allCandidates = [...wardrobeCandidates, ...productCandidates];
 
-    res.json({ matches });
+    const matches = findMatchesForItem(uploadedItem, allCandidates).map((m) => {
+      const candidate = m.item;
+      let weatherScore = null;
+      if (weatherData) {
+        weatherScore = scoreItemWeatherRelevance(candidate, weatherData);
+      }
+      const enrichedItem = {
+        ...candidate,
+        source: candidate._store ? "store" : "wardrobe",
+        weatherScore,
+        ...(candidate._store
+          ? {
+              store_id: candidate.store_id,
+              price: candidate.price,
+              currency: candidate.currency,
+              purchase_url: candidate.purchase_url,
+            }
+          : {}),
+      };
+      delete enrichedItem._store;
+      return { ...m, item: enrichedItem };
+    });
+
+    if (weatherData) {
+      matches.sort((a, b) => {
+        const aWs = a.weatherScore ?? 5;
+        const bWs = b.weatherScore ?? 5;
+        return bWs - aWs || b.score - a.score;
+      });
+    }
+
+    await MatchHistory.create({
+      user_id: req.user._id,
+      source_garment: uploadedItem,
+      matches,
+      weather: weatherData,
+    });
+
+    res.json({ matches, weather: weatherData });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
