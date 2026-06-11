@@ -1,6 +1,79 @@
 const User = require("../models/User");
 const UserToken = require("../models/UserToken");
+const Notification = require("../models/Notification");
 const { sendNotification } = require("../services/notificationService");
+
+
+// ─── In-App Notification CRUD ────────────────────────────────────────────────
+
+exports.getNotifications = async (req, res) => {
+  try {
+    const notifications = await Notification.find({ userId: req.user._id })
+      .sort({ createdAt: -1 })
+      .limit(50);
+    const unreadCount = await Notification.countDocuments({ userId: req.user._id, read: false });
+    res.status(200).json({ notifications, unreadCount });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+};
+
+exports.markAsRead = async (req, res) => {
+  try {
+    const notification = await Notification.findOneAndUpdate(
+      { _id: req.params.id, userId: req.user._id },
+      { read: true },
+      { new: true }
+    );
+    if (!notification) return res.status(404).json({ message: "Notification not found" });
+    res.status(200).json({ message: "Marked as read" });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+};
+
+exports.markAllAsRead = async (req, res) => {
+  try {
+    await Notification.updateMany(
+      { userId: req.user._id, read: false },
+      { read: true }
+    );
+    res.status(200).json({ message: "All marked as read" });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+};
+
+exports.deleteNotification = async (req, res) => {
+  try {
+    const notification = await Notification.findOneAndDelete({
+      _id: req.params.id,
+      userId: req.user._id,
+    });
+    if (!notification) return res.status(404).json({ message: "Notification not found" });
+    res.status(200).json({ message: "Notification deleted" });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+};
+
+exports.clearAll = async (req, res) => {
+  try {
+    await Notification.deleteMany({ userId: req.user._id });
+    res.status(200).json({ message: "All notifications cleared" });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+};
+
+// Helper: create an in-app notification for a user
+exports.createInAppNotification = async (userId, title, body, type = "general") => {
+  try {
+    return await Notification.create({ userId, title, body, type });
+  } catch (error) {
+    console.error("Failed to create in-app notification:", error.message);
+  }
+};
 
 
 exports.registerToken = async (req, res) => {
@@ -44,6 +117,8 @@ exports.sendNotificationsByEmail = async (req, res) => {
       title || "Notification",
       body || "You have a new notification."
     );
+
+    await exports.createInAppNotification(user._id, title || "Notification", body || "You have a new notification.");
 
     res.status(200).json({ message: "Notification sent successfully" });
   } catch (error) {
@@ -107,6 +182,8 @@ exports.sendToUser = async (req, res) => {
       data || {}
     );
 
+    await exports.createInAppNotification(user._id, title || "Notification", message || "You have a new notification.", data?.type || "general");
+
     res.status(200).json({ message: "Notification sent successfully", deviceCount: tokens.length });
   } catch (error) {
     res.status(500).json({ error: error.message });
@@ -134,6 +211,18 @@ exports.broadcast = async (req, res) => {
       message || "Check out the latest features in TryOn!",
       data || {}
     );
+
+    // Create in-app notifications for all users
+    const notifTitle = title || "TryOn Update";
+    const notifBody = message || "Check out the latest features in TryOn!";
+    const notifType = data?.type || "general";
+    const inAppNotifs = userIds.map(userId => ({
+      userId,
+      title: notifTitle,
+      body: notifBody,
+      type: notifType,
+    }));
+    await Notification.insertMany(inAppNotifs);
 
     res.status(200).json({ message: "Broadcast sent successfully", deviceCount: tokens.length });
   } catch (error) {

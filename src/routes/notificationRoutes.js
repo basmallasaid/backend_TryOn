@@ -266,4 +266,127 @@ router.post("/send-to-user", protect, notificationController.sendToUser);
  */
 router.post("/broadcast", protect, notificationController.broadcast);
 
+/**
+ * @swagger
+ * /api/notifications:
+ *   get:
+ *     summary: Get current user's in-app notifications
+ *     tags: [Notifications]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: List of notifications with unread count
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 notifications:
+ *                   type: array
+ *                   items:
+ *                     type: object
+ *                     properties:
+ *                       _id:
+ *                         type: string
+ *                       title:
+ *                         type: string
+ *                       body:
+ *                         type: string
+ *                       type:
+ *                         type: string
+ *                       read:
+ *                         type: boolean
+ *                       createdAt:
+ *                         type: string
+ *                         format: date-time
+ *                 unreadCount:
+ *                   type: integer
+ *       401:
+ *         description: Not authenticated
+ */
+router.get("/", protect, notificationController.getNotifications);
+
+/**
+ * @swagger
+ * /api/notifications/read-all:
+ *   patch:
+ *     summary: Mark all notifications as read
+ *     tags: [Notifications]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: All marked as read
+ *       401:
+ *         description: Not authenticated
+ */
+router.patch("/read-all", protect, notificationController.markAllAsRead);
+
+/**
+ * @swagger
+ * /api/notifications/{id}/read:
+ *   patch:
+ *     summary: Mark a single notification as read
+ *     tags: [Notifications]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Notification ID
+ *     responses:
+ *       200:
+ *         description: Marked as read
+ *       404:
+ *         description: Notification not found
+ *       401:
+ *         description: Not authenticated
+ */
+router.patch("/:id/read", protect, notificationController.markAsRead);
+
+/**
+ * @swagger
+ * /api/notifications/{id}:
+ *   delete:
+ *     summary: Delete a single notification
+ *     tags: [Notifications]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Notification ID
+ *     responses:
+ *       200:
+ *         description: Notification deleted
+ *       404:
+ *         description: Notification not found
+ *       401:
+ *         description: Not authenticated
+ */
+router.delete("/:id", protect, notificationController.deleteNotification);
+
+/**
+ * @swagger
+ * /api/notifications:
+ *   delete:
+ *     summary: Clear all notifications for current user
+ *     tags: [Notifications]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: All notifications cleared
+ *       401:
+ *         description: Not authenticated
+ */
+router.delete("/", protect, notificationController.clearAll);
+
 module.exports = router;
