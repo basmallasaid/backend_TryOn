@@ -130,33 +130,50 @@ async function analyzeImages(imageDataUrls, count, apiKey) {
 
   visionContent.push({ type: "text", text: userText });
 
-  const res = await fetch(`${CONFIG.GITHUB_MODELS_BASE_URL}/chat/completions`, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${apiKey}`,
-    },
-    body: JSON.stringify({
-      model: CONFIG.GITHUB_MODELS_MODEL,
-      messages: [
-        { role: "system", content: buildUpcycleSystemPrompt(count) },
-        { role: "user", content: visionContent },
-      ],
-      temperature: 0.7,
-      max_tokens: 4000,
-      response_format: { type: "json_object" },
-    }),
-  });
+  console.log("[Recycle] Calling GitHub Models API for analysis...");
 
-  if (!res.ok) {
-    const errText = await res.text().catch(() => "");
-    throw new Error(`Analysis failed (${res.status}): ${errText || res.statusText}`);
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 90000);
+
+  try {
+    const res = await fetch(`${CONFIG.GITHUB_MODELS_BASE_URL}/chat/completions`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${apiKey}`,
+      },
+      body: JSON.stringify({
+        model: CONFIG.GITHUB_MODELS_MODEL,
+        messages: [
+          { role: "system", content: buildUpcycleSystemPrompt(count) },
+          { role: "user", content: visionContent },
+        ],
+        temperature: 0.7,
+        max_tokens: 4000,
+        response_format: { type: "json_object" },
+      }),
+      signal: controller.signal,
+    });
+
+    clearTimeout(timeout);
+
+    if (!res.ok) {
+      const errText = await res.text().catch(() => "");
+      console.error(`[Recycle] GitHub Models API error (${res.status}):`, errText);
+      throw new Error(`Analysis failed (${res.status}): ${errText || res.statusText}`);
+    }
+
+    const data = await res.json();
+    const raw = data?.choices?.[0]?.message?.content || "";
+    console.log("[Recycle] Analysis completed successfully");
+    return normalizeUpcycleResult(parseJsonFromGpt(raw), count);
+  } catch (err) {
+    clearTimeout(timeout);
+    if (err.name === "AbortError") {
+      throw new Error("Analysis timed out. Please try again.");
+    }
+    throw err;
   }
-
-  const data = await res.json();
-  const raw = data?.choices?.[0]?.message?.content || "";
-  const parsed = parseJsonFromGpt(raw);
-  return normalizeUpcycleResult(parsed, count);
 }
 
 function buildImagePayload(model, prompt, images, size) {
