@@ -10,6 +10,9 @@ const {
   addToLatestTryOn,
   removeFromLatestTryOn,
   getLatestTryOn,
+  addToLatestRecycle,
+  getLatestRecycle,
+  removeFromLatestRecycle,
   getFavorites,
   addFavorite,
   updateFavorite,
@@ -356,6 +359,10 @@ router.post("/latest-tryon", protect, addToLatestTryOn);
  *         description: Not authenticated
  */
 router.delete("/latest-tryon/:id", protect, removeFromLatestTryOn);
+
+router.get("/latest-recycle", protect, getLatestRecycle);
+router.post("/latest-recycle", protect, addToLatestRecycle);
+router.delete("/latest-recycle/:id", protect, removeFromLatestRecycle);
 
 /**
  * @swagger

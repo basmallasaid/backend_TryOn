@@ -144,6 +144,17 @@ const userSchema = new mongoose.Schema(
       }],
       default: [],
     },
+
+    latestRecycle: {
+      type: [{
+        imageUrl: { type: String, required: true },
+        designTitle: { type: String },
+        designTitleAr: { type: String },
+        designDescription: { type: String },
+        designDescriptionAr: { type: String },
+      }],
+      default: [],
+    },
   },
   {
     timestamps: {

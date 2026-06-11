@@ -240,6 +240,75 @@ const getLatestTryOn = async (req, res) => {
   }
 };
 
+const addToLatestRecycle = async (req, res) => {
+  try {
+    const { imageUrl, designTitle, designTitleAr, designDescription, designDescriptionAr } = req.body;
+
+    if (!imageUrl) {
+      return res.status(400).json({ message: "Image URL is required" });
+    }
+
+    const user = await User.findById(req.user._id);
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    const alreadySaved = user.latestRecycle.some((item) => item.imageUrl === imageUrl);
+    if (alreadySaved) {
+      return res.status(409).json({ message: "Already saved" });
+    }
+
+    user.latestRecycle.push({ imageUrl, designTitle, designTitleAr, designDescription, designDescriptionAr });
+    await user.save();
+
+    res.status(201).json({
+      message: "Added to latest recycle",
+      latestRecycle: user.latestRecycle,
+    });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+const getLatestRecycle = async (req, res) => {
+  try {
+    const user = await User.findById(req.user._id);
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    res.status(200).json({ latestRecycle: user.latestRecycle });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+const removeFromLatestRecycle = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const user = await User.findById(req.user._id);
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    const item = user.latestRecycle.id(id);
+    if (!item) {
+      return res.status(404).json({ message: "Recycle record not found" });
+    }
+
+    item.deleteOne();
+    await user.save();
+
+    res.status(200).json({
+      message: "Removed from latest recycle",
+      latestRecycle: user.latestRecycle,
+    });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
 const getFavorites = async (req, res) => {
   try {
     const user = await User.findById(req.user._id);
@@ -430,6 +499,9 @@ module.exports = {
   addToLatestTryOn,
   removeFromLatestTryOn,
   getLatestTryOn,
+  addToLatestRecycle,
+  getLatestRecycle,
+  removeFromLatestRecycle,
   getFavorites,
   addFavorite,
   updateFavorite,
