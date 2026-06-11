@@ -117,6 +117,25 @@ const userSchema = new mongoose.Schema(
       default: null,
     },
 
+    darkMode: {
+      type: Boolean,
+      default: false,
+    },
+
+    favorites: [
+      {
+        itemType: {
+          type: String,
+          enum: ["PRODUCT", "WARDROBE", "TRYON"],
+          required: true,
+        },
+        itemId: {
+          type: mongoose.Schema.Types.ObjectId,
+          required: true,
+        },
+      },
+    ],
+
     latestTryOn: {
       type: [{
         imageUrl: { type: String, required: true },

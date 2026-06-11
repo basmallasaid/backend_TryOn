@@ -10,6 +10,13 @@ const {
   addToLatestTryOn,
   removeFromLatestTryOn,
   getLatestTryOn,
+  getFavorites,
+  addFavorite,
+  updateFavorite,
+  removeFavorite,
+  updateDarkMode,
+  updateUserImage,
+  deleteUserImage,
 } = require("../controllers/userController");
 
 const protect = require("../middlewares/authMiddleware");
@@ -349,6 +356,262 @@ router.post("/latest-tryon", protect, addToLatestTryOn);
  *         description: Not authenticated
  */
 router.delete("/latest-tryon/:id", protect, removeFromLatestTryOn);
+
+/**
+ * @swagger
+ * /api/users/favorites:
+ *   get:
+ *     summary: Get all favorites for the authenticated user
+ *     tags: [Users]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: List of favorites
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 favorites:
+ *                   type: array
+ *                   items:
+ *                     type: object
+ *                     properties:
+ *                       _id:
+ *                         type: string
+ *                       itemType:
+ *                         type: string
+ *                         enum: [PRODUCT, WARDROBE, TRYON]
+ *                       itemId:
+ *                         type: string
+ *       401:
+ *         description: Not authenticated
+ */
+router.get("/favorites", protect, getFavorites);
+
+/**
+ * @swagger
+ * /api/users/favorites:
+ *   post:
+ *     summary: Add an item to favorites
+ *     tags: [Users]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [itemType, itemId]
+ *             properties:
+ *               itemType:
+ *                 type: string
+ *                 enum: [PRODUCT, WARDROBE, TRYON]
+ *                 description: Type of the item to favorite
+ *               itemId:
+ *                 type: string
+ *                 description: ID of the item to favorite
+ *     responses:
+ *       201:
+ *         description: Added to favorites
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                 favorites:
+ *                   type: array
+ *       400:
+ *         description: Validation error or already in favorites
+ *       401:
+ *         description: Not authenticated
+ */
+router.post("/favorites", protect, addFavorite);
+
+/**
+ * @swagger
+ * /api/users/favorites/{id}:
+ *   put:
+ *     summary: Update a favorite item
+ *     tags: [Users]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: The _id of the favorite entry
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               itemType:
+ *                 type: string
+ *                 enum: [PRODUCT, WARDROBE, TRYON]
+ *               itemId:
+ *                 type: string
+ *     responses:
+ *       200:
+ *         description: Favorite updated
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                 favorites:
+ *                   type: array
+ *       404:
+ *         description: Favorite not found
+ *       401:
+ *         description: Not authenticated
+ */
+router.put("/favorites/:id", protect, updateFavorite);
+
+/**
+ * @swagger
+ * /api/users/favorites/{id}:
+ *   delete:
+ *     summary: Remove a favorite item
+ *     tags: [Users]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: The _id of the favorite entry to remove
+ *     responses:
+ *       200:
+ *         description: Removed from favorites
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                 favorites:
+ *                   type: array
+ *       404:
+ *         description: Favorite not found
+ *       401:
+ *         description: Not authenticated
+ */
+router.delete("/favorites/:id", protect, removeFavorite);
+
+/**
+ * @swagger
+ * /api/users/settings/dark-mode:
+ *   put:
+ *     summary: Update dark mode preference
+ *     tags: [Users]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [darkMode]
+ *             properties:
+ *               darkMode:
+ *                 type: boolean
+ *                 description: Whether to enable dark mode
+ *                 example: true
+ *     responses:
+ *       200:
+ *         description: Dark mode updated
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                 darkMode:
+ *                   type: boolean
+ *       400:
+ *         description: darkMode must be a boolean
+ *       401:
+ *         description: Not authenticated
+ */
+router.put("/settings/dark-mode", protect, updateDarkMode);
+
+/**
+ * @swagger
+ * /api/users/user-image:
+ *   put:
+ *     summary: Add or update user profile image
+ *     tags: [Users]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [userImage]
+ *             properties:
+ *               userImage:
+ *                 type: string
+ *                 description: URL of the user image
+ *                 example: "https://example.com/image.jpg"
+ *     responses:
+ *       200:
+ *         description: User image updated
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                 userImage:
+ *                   type: string
+ *       400:
+ *         description: userImage is required
+ *       401:
+ *         description: Not authenticated
+ */
+router.put("/user-image", protect, updateUserImage);
+
+/**
+ * @swagger
+ * /api/users/user-image:
+ *   delete:
+ *     summary: Remove user profile image
+ *     tags: [Users]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: User image removed
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *       401:
+ *         description: Not authenticated
+ */
+router.delete("/user-image", protect, deleteUserImage);
 
 router.get("/:id", protect, getUserById);
 
