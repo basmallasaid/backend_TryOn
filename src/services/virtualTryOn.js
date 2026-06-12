@@ -230,4 +230,7 @@ module.exports = {
   generateOutfitTryOn,
   DEFAULT_TRYON_PROMPT,
   OUTFIT_TRYON_PROMPT,
+  uploadImage,
+  createTask,
+  pollTask,
 };

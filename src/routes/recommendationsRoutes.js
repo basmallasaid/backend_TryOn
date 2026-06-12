@@ -4,6 +4,7 @@ const { getUserWardrobe } = require("../services/wardrobe");
 const Recommendation = require("../models/Recommendation");
 const protect = require("../middlewares/authMiddleware");
 const { getWeather, scoreItemWeatherRelevance } = require("../services/weather");
+const { generateCompositeForOutfit } = require("../services/compositeService");
 
 const router = Router();
 
@@ -178,12 +179,12 @@ router.post("/", protect, async (req, res) => {
     const wardrobe = await getUserWardrobe(req.user._id);
 
     let weatherData = null;
-    if (lat !== undefined && lon !== undefined) {
-      try {
-        weatherData = await getWeather(Number(lat), Number(lon));
-      } catch {
-        // weather fetch failed silently
-      }
+    const useLat = lat !== undefined ? Number(lat) : 30.0444;
+    const useLon = lon !== undefined ? Number(lon) : 31.2357;
+    try {
+      weatherData = await getWeather(useLat, useLon);
+    } catch (err) {
+      console.error('Weather fetch failed:', err.message);
     }
 
     let filteredWardrobe = wardrobe;
@@ -206,6 +207,24 @@ router.post("/", protect, async (req, res) => {
           }
         : null,
     }));
+
+    const apiKey = req.apiKeys?.KIE_API_KEY || process.env.KIE_API_key;
+
+    for (const outfit of enriched) {
+      const topItem = outfit.items.find(i => i.category === 'top');
+      const bottomItem = outfit.items.find(i => i.category === 'bottom');
+      if (topItem?.image && bottomItem?.image) {
+        try {
+          outfit.compositeImage = await generateCompositeForOutfit(
+            topItem.image,
+            bottomItem.image,
+            apiKey,
+          );
+        } catch (err) {
+          console.error('Composite image failed:', err.message);
+        }
+      }
+    }
 
     if (enriched.length) {
       await Recommendation.create({
