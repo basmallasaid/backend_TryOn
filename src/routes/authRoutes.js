@@ -287,8 +287,16 @@ router.get("/verify-email/:token", verifyEmail);
  *       302:
  *         description: Redirects to Google login page
  */
+function checkGoogleStrategy(req, res, next) {
+  if (!passport._strategy("google")) {
+    return res.status(500).json({ message: "Google Sign-In is not configured" });
+  }
+  next();
+}
+
 router.get(
   "/google",
+  checkGoogleStrategy,
   (req, res, next) => {
     passport.authenticate("google", {
       scope: ["profile", "email"],
@@ -312,6 +320,7 @@ router.get(
  */
 router.get(
   "/google/callback",
+  checkGoogleStrategy,
   passport.authenticate("google", {
     failureRedirect: "/login",
     session: false,
