@@ -1,9 +1,18 @@
-const crypto = require("crypto");
 const User = require("../models/User");
 
 const stripe = process.env.STRIPE_SECRET_KEY
   ? require("stripe")(process.env.STRIPE_SECRET_KEY)
   : null;
+
+const PLAN_PRICE_IDS = {
+  pro: {
+    month: process.env.STRIPE_PRO_MONTHLY_PRICE_ID,
+    year: process.env.STRIPE_PRO_YEARLY_PRICE_ID,
+  },
+};
+
+const VALID_PLANS = Object.keys(PLAN_PRICE_IDS);
+const VALID_INTERVALS = ["month", "year"];
 
 const createCheckoutSession = async (req, res) => {
   try {
@@ -11,14 +20,23 @@ const createCheckoutSession = async (req, res) => {
       return res.status(500).json({ message: "Stripe not configured" });
     }
 
-    const { userId, plan } = req.body;
+    const { userId, plan, interval } = req.body;
 
-    if (!userId || !plan) {
-      return res.status(400).json({ message: "userId and plan are required" });
+    if (!userId || !plan || !interval) {
+      return res.status(400).json({ message: "userId, plan, and interval are required" });
     }
 
-    if (plan !== "pro") {
-      return res.status(400).json({ message: "Invalid plan" });
+    if (!VALID_PLANS.includes(plan)) {
+      return res.status(400).json({ message: `Invalid plan. Must be one of: ${VALID_PLANS.join(", ")}` });
+    }
+
+    if (!VALID_INTERVALS.includes(interval)) {
+      return res.status(400).json({ message: `Invalid interval. Must be one of: ${VALID_INTERVALS.join(", ")}` });
+    }
+
+    const priceId = PLAN_PRICE_IDS[plan][interval];
+    if (!priceId) {
+      return res.status(500).json({ message: `Price ID not configured for ${plan} ${interval}` });
     }
 
     const user = await User.findById(userId);
@@ -41,10 +59,14 @@ const createCheckoutSession = async (req, res) => {
     const session = await stripe.checkout.sessions.create({
       customer: stripeCustomerId,
       mode: "subscription",
-      line_items: [{ price: process.env.STRIPE_PRO_PRICE_ID, quantity: 1 }],
+      line_items: [{ price: priceId, quantity: 1 }],
       success_url: `${process.env.CLIENT_URL}/pricing?success=true`,
       cancel_url: `${process.env.CLIENT_URL}/pricing?canceled=true`,
-      metadata: { userId: user._id.toString() },
+      metadata: {
+        userId: user._id.toString(),
+        plan,
+        interval,
+      },
     });
 
     res.status(200).json({ url: session.url });
@@ -92,4 +114,72 @@ const cancelSubscription = async (req, res) => {
   }
 };
 
-module.exports = { createCheckoutSession, cancelSubscription };
+const syncSubscription = async (req, res) => {
+  try {
+    const { userId } = req.body;
+    if (!userId) return res.status(400).json({ message: "userId is required" });
+
+    const user = await User.findById(userId);
+    if (!user) return res.status(404).json({ message: "User not found" });
+
+    if (!stripe) {
+      return res.status(500).json({ message: "Stripe not configured" });
+    }
+
+    if (!user.stripeCustomerId) {
+      return res.json({ subscriptionStatus: null });
+    }
+
+    const subscriptions = await stripe.subscriptions.list({
+      customer: user.stripeCustomerId,
+      limit: 1,
+      status: "all",
+    });
+
+    const sub = subscriptions.data[0];
+    if (sub && sub.status === "active") {
+      user.subscriptionId = sub.id;
+      user.subscriptionStatus = sub.status;
+      let periodEnd = sub.current_period_end;
+      if (!periodEnd) {
+        const invoices = await stripe.invoices.list({
+          subscription: sub.id,
+          limit: 1,
+        });
+        const inv = invoices.data[0];
+        if (inv?.lines?.data[0]?.period?.end) {
+          periodEnd = inv.lines.data[0].period.end;
+        }
+      }
+      if (periodEnd) {
+        user.subscriptionEndDate = new Date(periodEnd * 1000);
+      }
+      const price = sub.items.data[0]?.price;
+      if (price) {
+        const monthlyId = process.env.STRIPE_PRO_MONTHLY_PRICE_ID;
+        const yearlyId = process.env.STRIPE_PRO_YEARLY_PRICE_ID;
+        if (price.id === monthlyId) {
+          user.subscriptionPlan = "pro";
+          user.subscriptionInterval = "month";
+        } else if (price.id === yearlyId) {
+          user.subscriptionPlan = "pro";
+          user.subscriptionInterval = "year";
+        }
+      }
+      await user.save();
+      return res.json({ subscriptionStatus: "active", subscriptionId: sub.id, subscriptionEndDate: user.subscriptionEndDate });
+    }
+
+    if (sub) {
+      user.subscriptionStatus = sub.status;
+      await user.save();
+    }
+
+    res.json({ subscriptionStatus: sub?.status || null });
+  } catch (error) {
+    console.error("syncSubscription error:", error);
+    res.status(500).json({ message: error.message });
+  }
+};
+
+module.exports = { createCheckoutSession, cancelSubscription, syncSubscription };

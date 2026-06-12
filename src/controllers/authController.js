@@ -415,6 +415,10 @@ const googleMobileLogin = async (req, res) => {
       return res.status(400).json({ message: "idToken is required" });
     }
 
+    if (!verifyGoogleIdToken) {
+      return res.status(500).json({ message: "Google Sign-In is not configured" });
+    }
+
     const payload = await verifyGoogleIdToken(idToken);
 
     let user = await User.findOne({ google_id: payload.sub });

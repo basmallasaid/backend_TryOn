@@ -117,6 +117,17 @@ const userSchema = new mongoose.Schema(
       default: null,
     },
 
+    subscriptionPlan: {
+      type: String,
+      default: null,
+    },
+
+    subscriptionInterval: {
+      type: String,
+      enum: ["month", "year", null],
+      default: null,
+    },
+
     darkMode: {
       type: Boolean,
       default: false,

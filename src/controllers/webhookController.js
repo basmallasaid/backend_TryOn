@@ -27,6 +27,8 @@ const handleWebhook = async (req, res) => {
     case "checkout.session.completed": {
       const session = event.data.object;
       const userId = session.metadata?.userId;
+      const plan = session.metadata?.plan;
+      const interval = session.metadata?.interval;
 
       if (userId) {
         const subscription = await stripe.subscriptions.retrieve(
@@ -40,6 +42,8 @@ const handleWebhook = async (req, res) => {
           subscriptionEndDate: new Date(
             subscription.current_period_end * 1000,
           ),
+          subscriptionPlan: plan || null,
+          subscriptionInterval: interval || null,
         });
       }
       break;
