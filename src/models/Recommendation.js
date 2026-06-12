@@ -15,8 +15,22 @@ const recommendationSchema = new mongoose.Schema({
   },
   outfits: { type: [outfitSchema], default: [] },
   weather: { type: mongoose.Schema.Types.Mixed, default: null },
+  top_id: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: "WardrobeItem",
+    default: null,
+  },
+  bottom_id: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: "WardrobeItem",
+    default: null,
+  },
+  composite_image: { type: String, default: null },
+  score: { type: Number, default: null },
 }, {
   timestamps: { createdAt: "created_at", updatedAt: "updated_at" },
 });
+
+recommendationSchema.index({ user_id: 1, top_id: 1, bottom_id: 1 });
 
 module.exports = mongoose.model("Recommendation", recommendationSchema);

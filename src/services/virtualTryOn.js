@@ -60,6 +60,42 @@ async function uploadImage(imageDataUrl, options = {}) {
   return data.data.downloadUrl;
 }
 
+async function createGarmentTask(garmentImageUrls, prompt, options = {}) {
+  const apiKey = getApiKey(options);
+  const imageInput = Array.isArray(garmentImageUrls)
+    ? garmentImageUrls
+    : [garmentImageUrls];
+
+  const res = await fetch(`${KIE_API_BASE}/api/v1/jobs/createTask`, {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${apiKey}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      model: 'nano-banana-2',
+      input: {
+        prompt,
+        image_input: imageInput,
+        aspect_ratio: 'auto',
+      },
+    }),
+  });
+
+  if (!res.ok) {
+    const errText = await res.text().catch(() => '');
+    throw new Error(`API ${res.status} — ${errText || res.statusText}`);
+  }
+
+  const data = await res.json();
+
+  if (data.code !== 200 || !data.data?.taskId) {
+    throw new Error(`Task creation failed: ${data.msg || 'Unknown error'}`);
+  }
+
+  return data.data.taskId;
+}
+
 async function createTask(
   personImageUrl,
   garmentImageUrls,
@@ -232,5 +268,6 @@ module.exports = {
   OUTFIT_TRYON_PROMPT,
   uploadImage,
   createTask,
+  createGarmentTask,
   pollTask,
 };
