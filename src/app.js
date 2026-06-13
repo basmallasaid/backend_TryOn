@@ -25,6 +25,7 @@ const paymentRoutes = require("./routes/paymentRoutes");
 const webhookRoutes = require("./routes/webhookRoutes");
 const storeRoutes = require("./routes/storeRoutes");
 const productRoutes = require("./routes/productRoutes");
+const emailRoutes = require("./routes/emailRoutes");
 
 const app = express();
 
@@ -76,5 +77,6 @@ app.use("/api/recycle", recycleRoutes);
 app.use("/api/weather", weatherRoutes);
 app.use("/api/avatars", avatarRoutes);
 app.use("/api/notifications", notificationRoutes);
+app.use("/api/emails", emailRoutes);
 
 module.exports = app;
