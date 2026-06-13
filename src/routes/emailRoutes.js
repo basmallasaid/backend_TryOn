@@ -309,6 +309,7 @@ router.post("/admin/reply/:parentEmailId", protect, adminOnly, emailController.a
  *         description: Email not found
  */
 router.patch("/admin/mark-read/:id", protect, adminOnly, emailController.adminMarkRead);
+router.patch("/admin/mark-all-read", protect, adminOnly, emailController.adminMarkAllRead);
 
 /**
  * @swagger

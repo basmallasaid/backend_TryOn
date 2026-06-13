@@ -133,6 +133,11 @@ const userSchema = new mongoose.Schema(
       default: false,
     },
 
+    deletionNotified: {
+      type: Boolean,
+      default: false,
+    },
+
     favorites: [
       {
         itemType: {

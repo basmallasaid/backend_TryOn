@@ -620,11 +620,14 @@ router.put("/user-image", protect, updateUserImage);
  */
 router.delete("/user-image", protect, deleteUserImage);
 
-const { getAllUsers, getUserStats, createAdminUser } = require("../controllers/userController");
+const { getAllUsers, getUserStats, createAdminUser, deleteUser, markUserDeletionNotified, updateUser } = require("../controllers/userController");
 
 router.get("/stats", protect, getUserStats);
 router.get("/", protect, getAllUsers);
 router.post("/", protect, createAdminUser);
+router.patch("/:id/mark-notified", protect, markUserDeletionNotified);
+router.put("/:id", protect, updateUser);
+router.delete("/:id", protect, deleteUser);
 
 router.get("/:id", protect, getUserById);
 

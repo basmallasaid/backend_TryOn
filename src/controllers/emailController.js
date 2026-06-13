@@ -145,6 +145,15 @@ exports.adminGetUnreadCount = async (req, res) => {
   }
 };
 
+exports.adminMarkAllRead = async (req, res) => {
+  try {
+    const result = await emailService.markAllAsRead();
+    res.status(200).json({ message: "All emails marked as read", modifiedCount: result.modifiedCount });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+};
+
 exports.adminFilterEmails = async (req, res) => {
   try {
     const { sender, receiver, dateFrom, dateTo, isRead, page, limit } = req.query;

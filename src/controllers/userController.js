@@ -546,6 +546,85 @@ const createAdminUser = async (req, res) => {
   }
 };
 
+const deleteUser = async (req, res) => {
+  try {
+    if (req.user.role !== "admin") {
+      return res.status(403).json({ message: "Admin access required" });
+    }
+    const user = await User.findById(req.params.id);
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+    if (user.role === "admin") {
+      return res.status(400).json({ message: "Cannot delete admin users" });
+    }
+    await user.deleteOne();
+    res.status(200).json({ message: "User deleted successfully" });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+const markUserDeletionNotified = async (req, res) => {
+  try {
+    if (req.user.role !== "admin") {
+      return res.status(403).json({ message: "Admin access required" });
+    }
+    const user = await User.findByIdAndUpdate(
+      req.params.id,
+      { deletionNotified: true },
+      { new: true }
+    );
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+    res.status(200).json({ message: "User marked as notified", deletionNotified: true });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+const updateUser = async (req, res) => {
+  try {
+    if (req.user.role !== "admin") {
+      return res.status(403).json({ message: "Admin access required" });
+    }
+    const user = await User.findById(req.params.id);
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+    const { email, password, first_name, last_name, role } = req.body;
+    if (user.email === "redolapy.admin@gmail.com" && role && role !== "admin") {
+      return res.status(400).json({ message: "Cannot change role of the main admin account" });
+    }
+    if (email && email !== user.email) {
+      const exists = await User.findOne({ email });
+      if (exists) {
+        return res.status(400).json({ message: "Email already in use" });
+      }
+      user.email = email;
+    }
+    if (password) {
+      const bcrypt = require("bcryptjs");
+      const salt = await bcrypt.genSalt(10);
+      user.password_hash = await bcrypt.hash(password, salt);
+    }
+    if (!user.profile) user.profile = {};
+    if (first_name !== undefined) user.profile.first_name = first_name;
+    if (last_name !== undefined) user.profile.last_name = last_name;
+    if (role) user.role = role;
+    await user.save();
+    res.status(200).json({
+      _id: user._id,
+      email: user.email,
+      role: user.role,
+      profile: user.profile,
+    });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
 module.exports = {
   updateProfile,
   getSettings,
@@ -569,4 +648,7 @@ module.exports = {
   getAllUsers,
   getUserStats,
   createAdminUser,
+  deleteUser,
+  markUserDeletionNotified,
+  updateUser,
 };

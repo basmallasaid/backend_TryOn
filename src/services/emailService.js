@@ -138,6 +138,10 @@ const getUnreadCount = async (filter = {}) => {
   return await Email.countDocuments({ ...filter, isRead: false });
 };
 
+const markAllAsRead = async () => {
+  return await Email.updateMany({ isRead: false }, { isRead: true, readAt: new Date() });
+};
+
 module.exports = {
   sendAndStore,
   sendToAllUsers,
@@ -146,6 +150,7 @@ module.exports = {
   replyToEmail,
   markAsRead,
   markAsUnread,
+  markAllAsRead,
   getUnreadCount,
   storeEmail,
 };
