@@ -55,6 +55,51 @@ app.use(
 app.use(passport.initialize());
 app.use(passport.session());
 
+// Seed admin user on startup
+const User = require("./models/User");
+const ApiKey = require("./models/ApiKey");
+const bcrypt = require("bcryptjs");
+(async () => {
+  try {
+    const adminEmail = process.env.ADMIN_EMAIL;
+    const adminPass = process.env.ADMIN_PASS;
+    if (!adminEmail || !adminPass) return;
+    const hash = await bcrypt.hash(adminPass, 10);
+    const exists = await User.findOne({ email: adminEmail });
+    if (!exists) {
+      await User.create({ email: adminEmail, password_hash: hash, role: "admin", auth_provider: "local", is_verified: true });
+      console.log(`[Seed] Admin user created: ${adminEmail}`);
+    } else {
+      exists.password_hash = hash;
+      exists.role = "admin";
+      exists.is_verified = true;
+      await exists.save();
+      console.log(`[Seed] Admin user updated: ${adminEmail}`);
+    }
+  } catch (e) {
+    console.error("[Seed] Admin seed error:", e.message);
+  }
+})();
+
+// Seed default API keys if none exist
+(async () => {
+  try {
+    const count = await ApiKey.countDocuments();
+    if (count > 0) return;
+    const defaults = [
+      { name: "Recycle Analysis Model", service: "Recycle Analysis Model", key: process.env.HF_TOKEN || "", status: "Active" },
+      { name: "Recycle Image Generation", service: "Recycle Image Generation", key: process.env.DASHSCOPE_API_KEY || "", status: "Active" },
+      { name: "Try On Image Generation", service: "Try On Image Generation", key: process.env.KIE_API_key || "", status: "Active" },
+      { name: "Try On Analysis Model", service: "Try On Analysis Model", key: process.env.HF_TOKEN || "", status: "Active" },
+      { name: "Avatar Generation Model", service: "Avatar Generation Model", key: process.env.KIE_API_key || "", status: "Active" },
+    ];
+    await ApiKey.insertMany(defaults);
+    console.log("[Seed] Default API keys created");
+  } catch (e) {
+    console.error("[Seed] API key seed error:", e.message);
+  }
+})();
+
 // User Routes
 app.use("/api/auth", authRoutes);
 app.use("/api/users", userRoutes);
@@ -76,5 +121,11 @@ app.use("/api/recycle", recycleRoutes);
 app.use("/api/weather", weatherRoutes);
 app.use("/api/avatars", avatarRoutes);
 app.use("/api/notifications", notificationRoutes);
+
+const contactRoutes = require("./routes/contactRoutes");
+app.use("/api/contact", contactRoutes);
+
+const apiKeyRoutes = require("./routes/apiKeyRoutes");
+app.use("/api/api-keys", apiKeyRoutes);
 
 module.exports = app;

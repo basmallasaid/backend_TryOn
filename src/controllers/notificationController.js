@@ -2,6 +2,7 @@ const User = require("../models/User");
 const UserToken = require("../models/UserToken");
 const Notification = require("../models/Notification");
 const { sendNotification } = require("../services/notificationService");
+const sendEmail = require("../utils/sendEmail");
 
 
 // ─── In-App Notification CRUD ────────────────────────────────────────────────
@@ -13,6 +14,18 @@ exports.getNotifications = async (req, res) => {
       .limit(50);
     const unreadCount = await Notification.countDocuments({ userId: req.user._id, read: false });
     res.status(200).json({ notifications, unreadCount });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+};
+
+exports.getAllNotifications = async (req, res) => {
+  try {
+    const notifications = await Notification.find()
+      .populate('userId', 'email profile')
+      .sort({ createdAt: -1 })
+      .limit(100);
+    res.status(200).json({ notifications });
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
@@ -160,7 +173,7 @@ exports.sendTryOnReady = async (req, res) => {
 
 exports.sendToUser = async (req, res) => {
   try {
-    const { email, title, message, data } = req.body;
+    const { email, title, message, data, channels = ["app"] } = req.body;
     if (!email) return res.status(400).json({ message: "Email is required" });
 
     const user = await User.findOne({ email });
@@ -170,21 +183,53 @@ exports.sendToUser = async (req, res) => {
       return res.status(400).json({ message: "Notifications are disabled for this user" });
     }
 
-    const tokens = await UserToken.find({ userId: user._id });
-    if (!tokens.length) {
-      return res.status(400).json({ message: "No registered devices found for this user" });
+    const notifTitle = title || "Notification";
+    const notifBody = message || "You have a new notification.";
+    const results = { app: false, email: false, website: false };
+
+    // App channel — in-app notification
+    if (channels.includes("app")) {
+      await exports.createInAppNotification(user._id, notifTitle, notifBody, data?.type || "general");
+      results.app = true;
     }
 
-    await sendNotification(
-      tokens.map(t => ({ expoPushToken: t.expoPushToken })),
-      title || "Notification",
-      message || "You have a new notification.",
-      data || {}
-    );
+    // Email channel
+    if (channels.includes("email")) {
+      try {
+        await sendEmail({
+          email: user.email,
+          subject: notifTitle,
+          message: notifBody,
+          html: `<h2>${notifTitle}</h2><p>${notifBody}</p>`,
+        });
+        results.email = true;
+      } catch (err) {
+        console.error("Email send failed:", err.message);
+      }
+    }
 
-    await exports.createInAppNotification(user._id, title || "Notification", message || "You have a new notification.", data?.type || "general");
+    // Website channel — push notification via Expo
+    let deviceCount = 0;
+    if (channels.includes("website")) {
+      const tokens = await UserToken.find({ userId: user._id });
+      if (tokens.length) {
+        await sendNotification(
+          tokens.map(t => ({ expoPushToken: t.expoPushToken })),
+          notifTitle, notifBody, data || {}
+        );
+        deviceCount = tokens.length;
+        results.website = true;
+      } else if (user.expoPushToken) {
+        await sendNotification(
+          [{ expoPushToken: user.expoPushToken }],
+          notifTitle, notifBody, data || {}
+        );
+        deviceCount = 1;
+        results.website = true;
+      }
+    }
 
-    res.status(200).json({ message: "Notification sent successfully", deviceCount: tokens.length });
+    res.status(200).json({ message: "Notification sent successfully", deviceCount, results });
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
@@ -192,39 +237,66 @@ exports.sendToUser = async (req, res) => {
 
 exports.broadcast = async (req, res) => {
   try {
-    const { title, message, data } = req.body;
+    const { title, message, data, channels = ["app"] } = req.body;
 
     const users = await User.find({
       "settings.notifications_enabled": { $ne: false },
-    }).select("_id");
+    });
 
     const userIds = users.map(u => u._id);
-    const tokens = await UserToken.find({ userId: { $in: userIds } });
-
-    if (!tokens.length) {
-      return res.status(400).json({ message: "No registered devices found" });
-    }
-
-    await sendNotification(
-      tokens.map(t => ({ expoPushToken: t.expoPushToken })),
-      title || "TryOn Update",
-      message || "Check out the latest features in TryOn!",
-      data || {}
-    );
-
-    // Create in-app notifications for all users
     const notifTitle = title || "TryOn Update";
     const notifBody = message || "Check out the latest features in TryOn!";
     const notifType = data?.type || "general";
-    const inAppNotifs = userIds.map(userId => ({
-      userId,
-      title: notifTitle,
-      body: notifBody,
-      type: notifType,
-    }));
-    await Notification.insertMany(inAppNotifs);
+    const results = { app: false, email: false, website: false };
 
-    res.status(200).json({ message: "Broadcast sent successfully", deviceCount: tokens.length });
+    // App channel — in-app notifications
+    if (channels.includes("app")) {
+      const inAppNotifs = userIds.map(userId => ({
+        userId,
+        title: notifTitle,
+        body: notifBody,
+        type: notifType,
+      }));
+      await Notification.insertMany(inAppNotifs);
+      results.app = true;
+    }
+
+    // Email channel
+    if (channels.includes("email")) {
+      let emailCount = 0;
+      for (const user of users) {
+        if (!user.email) continue;
+        try {
+          await sendEmail({
+            email: user.email,
+            subject: notifTitle,
+            message: notifBody,
+            html: `<h2>${notifTitle}</h2><p>${notifBody}</p>`,
+          });
+          emailCount++;
+        } catch (err) {
+          console.error(`Email failed for ${user.email}:`, err.message);
+        }
+      }
+      results.email = true;
+      results.emailCount = emailCount;
+    }
+
+    // Website channel — push notifications via Expo
+    let deviceCount = 0;
+    if (channels.includes("website")) {
+      const tokens = await UserToken.find({ userId: { $in: userIds } });
+      if (tokens.length) {
+        await sendNotification(
+          tokens.map(t => ({ expoPushToken: t.expoPushToken })),
+          notifTitle, notifBody, data || {}
+        );
+        deviceCount = tokens.length;
+      }
+      results.website = true;
+    }
+
+    res.status(200).json({ message: "Broadcast sent successfully", deviceCount, results });
   } catch (error) {
     res.status(500).json({ error: error.message });
   }

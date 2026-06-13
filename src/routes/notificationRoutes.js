@@ -306,6 +306,7 @@ router.post("/broadcast", protect, notificationController.broadcast);
  *         description: Not authenticated
  */
 router.get("/", protect, notificationController.getNotifications);
+router.get("/all", protect, notificationController.getAllNotifications);
 
 /**
  * @swagger
