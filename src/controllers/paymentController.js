@@ -23,20 +23,28 @@ const createCheckoutSession = async (req, res) => {
     const { userId, plan, interval } = req.body;
 
     if (!userId || !plan || !interval) {
-      return res.status(400).json({ message: "userId, plan, and interval are required" });
+      return res
+        .status(400)
+        .json({ message: "userId, plan, and interval are required" });
     }
 
     if (!VALID_PLANS.includes(plan)) {
-      return res.status(400).json({ message: `Invalid plan. Must be one of: ${VALID_PLANS.join(", ")}` });
+      return res.status(400).json({
+        message: `Invalid plan. Must be one of: ${VALID_PLANS.join(", ")}`,
+      });
     }
 
     if (!VALID_INTERVALS.includes(interval)) {
-      return res.status(400).json({ message: `Invalid interval. Must be one of: ${VALID_INTERVALS.join(", ")}` });
+      return res.status(400).json({
+        message: `Invalid interval. Must be one of: ${VALID_INTERVALS.join(", ")}`,
+      });
     }
 
     const priceId = PLAN_PRICE_IDS[plan][interval];
     if (!priceId) {
-      return res.status(500).json({ message: `Price ID not configured for ${plan} ${interval}` });
+      return res
+        .status(500)
+        .json({ message: `Price ID not configured for ${plan} ${interval}` });
     }
 
     const user = await User.findById(userId);
@@ -56,12 +64,17 @@ const createCheckoutSession = async (req, res) => {
       await user.save();
     }
 
+    const successUrl =
+      req.body.success_url || `${process.env.CLIENT_URL}/pricing?success=true`;
+    const cancelUrl =
+      req.body.cancel_url || `${process.env.CLIENT_URL}/pricing?canceled=true`;
+
     const session = await stripe.checkout.sessions.create({
       customer: stripeCustomerId,
       mode: "subscription",
       line_items: [{ price: priceId, quantity: 1 }],
-      success_url: `${process.env.CLIENT_URL}/pricing?success=true`,
-      cancel_url: `${process.env.CLIENT_URL}/pricing?canceled=true`,
+      success_url: successUrl,
+      cancel_url: cancelUrl,
       metadata: {
         userId: user._id.toString(),
         plan,
@@ -89,10 +102,16 @@ const cancelSubscription = async (req, res) => {
     }
 
     if (!user.subscriptionId || user.subscriptionStatus !== "active") {
-      return res.status(400).json({ message: "No active subscription to cancel" });
+      return res
+        .status(400)
+        .json({ message: "No active subscription to cancel" });
     }
 
-    if (stripe && user.subscriptionId.startsWith("sub_") && !user.subscriptionId.startsWith("sub_fake_")) {
+    if (
+      stripe &&
+      user.subscriptionId.startsWith("sub_") &&
+      !user.subscriptionId.startsWith("sub_fake_")
+    ) {
       try {
         await stripe.subscriptions.cancel(user.subscriptionId);
       } catch {
@@ -167,7 +186,13 @@ const syncSubscription = async (req, res) => {
         }
       }
       await user.save();
-      return res.json({ subscriptionStatus: "active", subscriptionId: sub.id, subscriptionEndDate: user.subscriptionEndDate });
+      return res.json({
+        subscriptionStatus: "active",
+        subscriptionId: sub.id,
+        subscriptionPlan: user.subscriptionPlan,
+        subscriptionInterval: user.subscriptionInterval,
+        subscriptionEndDate: user.subscriptionEndDate,
+      });
     }
 
     if (sub) {
@@ -182,4 +207,8 @@ const syncSubscription = async (req, res) => {
   }
 };
 
-module.exports = { createCheckoutSession, cancelSubscription, syncSubscription };
+module.exports = {
+  createCheckoutSession,
+  cancelSubscription,
+  syncSubscription,
+};

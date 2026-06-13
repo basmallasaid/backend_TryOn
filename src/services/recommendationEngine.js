@@ -1,4 +1,6 @@
 const { getItemColors } = require("./normalizer.js");
+const { weatherToSeasons } = require("./weather.js");
+const OutfitUsage = require("../models/OutfitUsage");
 
 const CATEGORY = Object.freeze({
   TOP: "top",
@@ -769,6 +771,151 @@ function getRecommendations(wardrobe, limit = 10) {
   return rankOutfits(outfits, limit);
 }
 
+function getWeatherBasedItemScore(item, weatherData) {
+  const { temperature, condition } = weatherData;
+  const relevantSeasons = weatherToSeasons(temperature);
+
+  const itemSeasons = item.season || [];
+  if (!itemSeasons.length) return 5;
+
+  const overlap = itemSeasons.filter((s) => relevantSeasons.includes(s)).length;
+  let score = overlap >= 2 ? 10 : overlap === 1 ? 8 : 3;
+
+  if (["rain", "drizzle", "rain_showers", "thunderstorm", "snow"].includes(condition)) {
+    if (item.category === "outerwear") score = Math.min(score + 3, 10);
+    if (item.category === "footwear" && condition === "snow") score = Math.min(score + 2, 10);
+  }
+
+  if (condition === "thunderstorm" || condition === "snow") {
+    if (item.category === "accessory" || item.category === "dress") score = Math.max(score - 2, 0);
+  }
+
+  return score;
+}
+
+function buildCombinationKey(topId, bottomId) {
+  return `${String(topId)}_${String(bottomId)}`;
+}
+
+async function getUsageMap(userId) {
+  const usageRecords = await OutfitUsage.find({ user_id: userId }).lean();
+  const map = new Map();
+  for (const record of usageRecords) {
+    const key = buildCombinationKey(record.top_id, record.bottom_id);
+    map.set(key, record);
+  }
+  return map;
+}
+
+async function getItemUsageCounts(userId) {
+  const usageRecords = await OutfitUsage.find({ user_id: userId }).lean();
+  const topCounts = new Map();
+  const bottomCounts = new Map();
+
+  for (const record of usageRecords) {
+    const topKey = String(record.top_id);
+    const bottomKey = String(record.bottom_id);
+    topCounts.set(topKey, (topCounts.get(topKey) || 0) + record.usage_count);
+    bottomCounts.set(bottomKey, (bottomCounts.get(bottomKey) || 0) + record.usage_count);
+  }
+
+  return { topCounts, bottomCounts };
+}
+
+async function getRotatedRecommendations(wardrobe, weatherData, userId, limit = 10) {
+  if (!wardrobe || wardrobe.length === 0) return [];
+
+  const tops = wardrobe.filter((i) => i.category === CATEGORY.TOP);
+  const bottoms = wardrobe.filter((i) => i.category === CATEGORY.BOTTOM);
+
+  if (tops.length === 0 || bottoms.length === 0) return [];
+
+  const usageMap = await getUsageMap(userId);
+  const { topCounts, bottomCounts } = await getItemUsageCounts(userId);
+
+  const candidateOutfits = [];
+
+  for (const top of tops) {
+    const topWeatherScore = weatherData ? getWeatherBasedItemScore(top, weatherData) : 5;
+
+    if (weatherData && topWeatherScore < 3) continue;
+
+    for (const bottom of bottoms) {
+      const bottomWeatherScore = weatherData ? getWeatherBasedItemScore(bottom, weatherData) : 5;
+
+      if (weatherData && bottomWeatherScore < 3) continue;
+
+      if (!categoriesCompatible(top.category, bottom.category)) continue;
+
+      const comboKey = buildCombinationKey(top._id, bottom._id);
+      const usageRecord = usageMap.get(comboKey);
+
+      const breakdown = scoreOutfit([top, bottom]);
+      const compatibilityScore = computeWeightedScore(breakdown);
+      const avgWeatherScore = Math.round((topWeatherScore + bottomWeatherScore) / 2);
+
+      let rotationScore;
+      let rotationGroup;
+
+      if (!usageRecord) {
+        rotationScore = 1000;
+        rotationGroup = 0;
+      } else {
+        const daysSinceLastUse = (Date.now() - new Date(usageRecord.last_used_at).getTime()) / (1000 * 60 * 60 * 24);
+        rotationScore = Math.max(0, 100 - daysSinceLastUse);
+        rotationGroup = 1;
+      }
+
+      const topItemUsage = topCounts.get(String(top._id)) || 0;
+      const bottomItemUsage = bottomCounts.get(String(bottom._id)) || 0;
+      const itemDiversityBonus = Math.max(0, 50 - (topItemUsage * 5 + bottomItemUsage * 5));
+
+      const totalScore = compatibilityScore + rotationScore + itemDiversityBonus;
+
+      candidateOutfits.push({
+        score: compatibilityScore,
+        totalScore,
+        rotationScore,
+        itemDiversityBonus,
+        breakdown,
+        items: [
+          { ...top.toObject(), weatherScore: topWeatherScore },
+          { ...bottom.toObject(), weatherScore: bottomWeatherScore },
+        ],
+        weatherScore: avgWeatherScore,
+        _comboKey: comboKey,
+        _usageRecord: usageRecord,
+        _rotationGroup: rotationGroup,
+        _topWeatherScore: topWeatherScore,
+        _bottomWeatherScore: bottomWeatherScore,
+      });
+    }
+  }
+
+  candidateOutfits.sort((a, b) => {
+    if (a._rotationGroup !== b._rotationGroup) {
+      return a._rotationGroup - b._rotationGroup;
+    }
+    if (a._rotationGroup === 1 && b._rotationGroup === 1) {
+      const aTime = a._usageRecord ? new Date(a._usageRecord.last_used_at).getTime() : 0;
+      const bTime = b._usageRecord ? new Date(b._usageRecord.last_used_at).getTime() : 0;
+      return aTime - bTime;
+    }
+    return b.totalScore - a.totalScore;
+  });
+
+  const result = candidateOutfits.slice(0, limit);
+
+  return result.map((o) => ({
+    score: o.score,
+    breakdown: o.breakdown,
+    items: o.items,
+    weather: {
+      avgWeatherScore: o.weatherScore,
+    },
+  }));
+}
+
 module.exports = {
   CATEGORY,
   STYLE,
@@ -799,4 +946,6 @@ module.exports = {
   generateMatchExplanation,
   rankOutfits,
   getRecommendations,
+  getRotatedRecommendations,
+  getWeatherBasedItemScore,
 };

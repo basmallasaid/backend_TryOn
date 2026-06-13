@@ -1,10 +1,11 @@
 const { Router } = require("express");
-const { getRecommendations } = require("../services/recommendationEngine");
+const { getRotatedRecommendations } = require("../services/recommendationEngine");
 const { getUserWardrobe } = require("../services/wardrobe");
 const Recommendation = require("../models/Recommendation");
+const OutfitUsage = require("../models/OutfitUsage");
 const protect = require("../middlewares/authMiddleware");
-const { getWeather, scoreItemWeatherRelevance } = require("../services/weather");
-const { generateCompositeForOutfit } = require("../services/compositeService");
+const { getWeather } = require("../services/weather");
+const { generateCompositeForOutfitWithUrl } = require("../services/compositeService");
 
 const router = Router();
 
@@ -79,7 +80,7 @@ router.get("/", protect, async (req, res) => {
  * /api/recommendations:
  *   post:
  *     summary: Generate new outfit recommendations from the user's wardrobe
- *     description: Generates scored outfit combinations from wardrobe items. Optionally accepts lat/lon for weather-aware filtering (items unsuitable for current weather are excluded).
+ *     description: Generates scored outfit combinations from wardrobe items. Uses rotation logic to avoid repeating outfits. Optionally accepts lat/lon for weather-aware filtering.
  *     tags: [Recommendations]
  *     security:
  *       - bearerAuth: []
@@ -122,48 +123,14 @@ router.get("/", protect, async (req, res) => {
  *                         description: Total compatibility score (0-1000 scale)
  *                       breakdown:
  *                         type: object
- *                         properties:
- *                           color:
- *                             type: number
- *                           style:
- *                             type: number
- *                           season:
- *                             type: number
- *                           pattern:
- *                             type: number
- *                           gender:
- *                             type: number
- *                           category:
- *                             type: number
  *                       items:
  *                         type: array
  *                         items:
  *                           type: object
- *                           properties:
- *                             id:
- *                               type: string
- *                             name:
- *                               type: string
- *                             category:
- *                               type: string
- *                             color:
- *                               type: string
- *                             style:
- *                               type: string
- *                             weatherScore:
- *                               type: number
  *                       weather:
  *                         type: object
- *                         properties:
- *                           temperature:
- *                             type: number
- *                           feelsLike:
- *                             type: number
- *                           condition:
- *                             type: string
- *                           avgWeatherScore:
- *                             type: number
- *                             description: Average weather relevance score across all items in the outfit
+ *                       compositeImage:
+ *                         type: string
  *                 weather:
  *                   $ref: '#/components/schemas/WeatherData'
  *       400:
@@ -187,54 +154,106 @@ router.post("/", protect, async (req, res) => {
       console.error('Weather fetch failed:', err.message);
     }
 
-    let filteredWardrobe = wardrobe;
-    if (weatherData) {
-      filteredWardrobe = wardrobe.map((item) => {
-        const weatherScore = scoreItemWeatherRelevance(item, weatherData);
-        return { ...item.toObject?.() || item, weatherScore };
-      }).filter((item) => item.weatherScore >= 3);
-    }
+    const outfits = await getRotatedRecommendations(
+      wardrobe,
+      weatherData,
+      req.user._id,
+      limit,
+    );
 
-    const outfits = getRecommendations(filteredWardrobe, limit);
-    const enriched = outfits.map((outfit) => ({
-      ...outfit,
-      weather: weatherData
-        ? {
-            ...weatherData,
-            avgWeatherScore: Math.round(
-              outfit.items.reduce((s, i) => s + (i.weatherScore ?? 5), 0) / outfit.items.length
-            ),
-          }
-        : null,
-    }));
+    const enriched = [];
+    const usageUpdates = [];
 
-    const apiKey = req.apiKeys?.KIE_API_KEY || process.env.KIE_API_key;
-
-    for (const outfit of enriched) {
+    for (const outfit of outfits) {
       const topItem = outfit.items.find(i => i.category === 'top');
       const bottomItem = outfit.items.find(i => i.category === 'bottom');
+
+      const apiKey = req.apiKeys?.KIE_API_KEY || process.env.KIE_API_key;
+
+      let compositeImage = null;
       if (topItem?.image && bottomItem?.image) {
         try {
-          outfit.compositeImage = await generateCompositeForOutfit(
+          compositeImage = await generateCompositeForOutfitWithUrl(
             topItem.image,
             bottomItem.image,
             apiKey,
           );
+          console.log(`Composite generated successfully, length: ${compositeImage.length}`);
         } catch (err) {
-          console.error('Composite image failed:', err.message);
+          console.error('Composite image generation failed:', err.message);
         }
+      } else {
+        console.warn('Cannot generate composite: top or bottom image missing');
+      }
+
+      const topWeatherScore = topItem?.weatherScore ?? 5;
+      const bottomWeatherScore = bottomItem?.weatherScore ?? 5;
+
+      const enrichedOutfit = {
+        ...outfit,
+        weather: weatherData
+          ? {
+              ...weatherData,
+              avgWeatherScore: outfit.weather?.avgWeatherScore ?? Math.round((topWeatherScore + bottomWeatherScore) / 2),
+            }
+          : null,
+        compositeImage,
+        top_id: topItem?._id || topItem?.id || null,
+        bottom_id: bottomItem?._id || bottomItem?.id || null,
+      };
+
+      enriched.push(enrichedOutfit);
+
+      if (topItem?._id && bottomItem?._id) {
+        usageUpdates.push({
+          updateOne: {
+            filter: {
+              user_id: req.user._id,
+              top_id: topItem._id,
+              bottom_id: bottomItem._id,
+            },
+            update: {
+              $inc: { usage_count: 1 },
+              $set: { last_used_at: new Date() },
+            },
+            upsert: true,
+          },
+        });
+      }
+    }
+
+    if (usageUpdates.length) {
+      try {
+        await OutfitUsage.bulkWrite(usageUpdates);
+      } catch (err) {
+        console.error('Failed to update outfit usage:', err.message);
       }
     }
 
     if (enriched.length) {
+      const topItem = enriched[0].items.find(i => i.category === 'top');
+      const bottomItem = enriched[0].items.find(i => i.category === 'bottom');
+
       await Recommendation.create({
         user_id: req.user._id,
         outfits: enriched,
         weather: weatherData,
+        top_id: topItem?._id || null,
+        bottom_id: bottomItem?._id || null,
+        composite_image: enriched[0]?.compositeImage || null,
+        score: enriched[0]?.score || null,
       });
     }
 
-    res.json({ outfits: enriched, weather: weatherData });
+    const responseOutfits = enriched.map((o) => ({
+      score: o.score,
+      breakdown: o.breakdown,
+      items: o.items,
+      weather: o.weather,
+      compositeImage: o.compositeImage,
+    }));
+
+    res.json({ outfits: responseOutfits, weather: weatherData });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
