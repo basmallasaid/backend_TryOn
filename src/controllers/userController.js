@@ -480,6 +480,72 @@ const deleteUserImage = async (req, res) => {
   }
 };
 
+const getAllUsers = async (req, res) => {
+  try {
+    if (req.user.role !== "admin") {
+      return res.status(403).json({ message: "Admin access required" });
+    }
+    const users = await User.find({})
+      .select("-password_hash -verification_token -verification_token_expires -reset_token -reset_token_expires")
+      .sort({ created_at: -1 });
+    res.status(200).json(users);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+const getUserStats = async (req, res) => {
+  try {
+    if (req.user.role !== "admin") {
+      return res.status(403).json({ message: "Admin access required" });
+    }
+    const total = await User.countDocuments();
+    const active = await User.countDocuments({ role: { $ne: null } });
+    const adminCount = await User.countDocuments({ role: "admin" });
+    const recentWeek = await User.countDocuments({
+      created_at: { $gte: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000) },
+    });
+    res.status(200).json({ total, active, admins: adminCount, recentWeek });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+const createAdminUser = async (req, res) => {
+  try {
+    if (req.user.role !== "admin") {
+      return res.status(403).json({ message: "Admin access required" });
+    }
+    const { email, password, first_name, last_name, role: userRole } = req.body;
+    if (!email || !password) {
+      return res.status(400).json({ message: "Email and password are required" });
+    }
+    const exists = await User.findOne({ email });
+    if (exists) {
+      return res.status(400).json({ message: "User already exists" });
+    }
+    const bcrypt = require("bcryptjs");
+    const salt = await bcrypt.genSalt(10);
+    const hashedPassword = await bcrypt.hash(password, salt);
+    const user = await User.create({
+      email,
+      password_hash: hashedPassword,
+      auth_provider: "local",
+      role: userRole || "user",
+      profile: { first_name: first_name || null, last_name: last_name || null },
+      is_verified: true,
+    });
+    res.status(201).json({
+      _id: user._id,
+      email: user.email,
+      role: user.role,
+      profile: user.profile,
+    });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
 module.exports = {
   updateProfile,
   getSettings,
@@ -500,4 +566,7 @@ module.exports = {
   updateDarkMode,
   updateUserImage,
   deleteUserImage,
+  getAllUsers,
+  getUserStats,
+  createAdminUser,
 };

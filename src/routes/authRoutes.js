@@ -332,7 +332,8 @@ router.get(
     const fname = req.user.profile?.first_name || "";
     const lname = req.user.profile?.last_name || "";
     const image = req.user.userImage || "";
-    const url = `http://localhost:5173/auth/callback?token=${token}&_id=${req.user._id}&email=${req.user.email}&fname=${encodeURIComponent(fname)}&lname=${encodeURIComponent(lname)}&image=${encodeURIComponent(image)}`;
+    const role = req.user.role || "user";
+    const url = `http://localhost:5173/auth/callback?token=${token}&_id=${req.user._id}&email=${req.user.email}&role=${role}&fname=${encodeURIComponent(fname)}&lname=${encodeURIComponent(lname)}&image=${encodeURIComponent(image)}`;
     console.log(`[Google Callback] Redirecting to frontend callback`);
     res.redirect(url);
   },
