@@ -321,10 +321,16 @@ router.get(
 router.get(
   "/google/callback",
   checkGoogleStrategy,
-  passport.authenticate("google", {
-    failureRedirect: "/login",
-    session: false,
-  }),
+  (req, res, next) => {
+    passport.authenticate("google", { session: false }, (err, user, info) => {
+      if (err || !user) {
+        const errorMsg = encodeURIComponent(err?.message || "google_login_failed");
+        return res.redirect(`http://localhost:5173/auth/callback?error=${errorMsg}`);
+      }
+      req.user = user;
+      next();
+    })(req, res, next);
+  },
 
   (req, res) => {
     console.log(`[Google Callback] User authenticated: ${req.user?._id} / ${req.user?.email}`);
