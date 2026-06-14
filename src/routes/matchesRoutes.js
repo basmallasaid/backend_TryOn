@@ -8,6 +8,7 @@ const protect = require("../middlewares/authMiddleware");
 const { getWeather, scoreItemWeatherRelevance } = require("../services/weather");
 const { analyzeClothing, imageUrlToDataUrl } = require("../services/analyze");
 const { getItemColors } = require("../services/normalizer");
+const { sendAutomated } = require("../services/notificationService");
 
 function analysisToEngineItem(garment) {
   return {
@@ -317,6 +318,8 @@ router.post("/", protect, async (req, res) => {
       weather: weatherData,
     });
 
+    sendAutomated('matching', req.user._id, { operation: 'matching' });
+
     res.json({ matches, weather: weatherData });
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -567,6 +570,8 @@ router.post("/analysis/:analysisId", protect, async (req, res) => {
       matches,
       weather: weatherData,
     });
+
+    sendAutomated('matching', req.user._id, { operation: 'matching' });
 
     res.json({ matches, weather: weatherData });
   } catch (err) {

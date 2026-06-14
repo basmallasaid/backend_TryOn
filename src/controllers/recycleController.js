@@ -6,6 +6,7 @@ const {
   bufferToDataUrl,
   translateUpcycleResult,
 } = require("../services/recycleService");
+const { sendAutomated } = require("../services/notificationService");
 
 exports.analyze = async (req, res) => {
   try {
@@ -69,6 +70,10 @@ exports.analyze = async (req, res) => {
       status: "analyzed",
       model_used: "gpt-4o-mini",
     });
+
+    if (req.user?._id) {
+      sendAutomated('recycle', req.user._id, { operation: 'recycle' });
+    }
 
     res.json({
       success: true,
@@ -148,6 +153,10 @@ exports.generateIdea = async (req, res) => {
     const anyDone = session.ideas.some((i) => i.generation_status === "done");
     session.status = allDone ? "completed" : anyDone ? "partial" : "analyzed";
     await session.save();
+
+    if (req.user?._id) {
+      sendAutomated('recycle', req.user._id, { operation: 'recycle' });
+    }
 
     res.json({
       success: true,
@@ -232,6 +241,10 @@ exports.generateAllIdeas = async (req, res) => {
     const anyDone = session.ideas.some((i) => i.generation_status === "done");
     session.status = allDone ? "completed" : anyDone ? "partial" : "analyzed";
     await session.save();
+
+    if (req.user?._id) {
+      sendAutomated('recycle', req.user._id, { operation: 'recycle' });
+    }
 
     const successCount = results.filter((r) => r.success).length;
     res.json({

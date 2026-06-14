@@ -56,31 +56,27 @@ app.use(
 app.use(passport.initialize());
 app.use(passport.session());
 
-// Seed admin user on startup
 const User = require("./models/User");
 const ApiKey = require("./models/ApiKey");
+const AutomatedNotification = require("./models/AutomatedNotification");
 const bcrypt = require("bcryptjs");
-(async () => {
+const { getEncryptedPassword } = require("./utils/adminPassword");
+
+const seedAdminUser = async () => {
+  const adminEmail = process.env.ADMIN_EMAIL;
+  if (!adminEmail) return;
+
   try {
-    const adminEmail = process.env.ADMIN_EMAIL;
-    const adminPass = process.env.ADMIN_PASS;
-    if (!adminEmail || !adminPass) return;
-    const hash = await bcrypt.hash(adminPass, 10);
+    const hash = await bcrypt.hash(getEncryptedPassword(), 10);
     const exists = await User.findOne({ email: adminEmail });
     if (!exists) {
       await User.create({ email: adminEmail, password_hash: hash, role: "admin", auth_provider: "local", is_verified: true });
       console.log(`[Seed] Admin user created: ${adminEmail}`);
-    } else {
-      exists.password_hash = hash;
-      exists.role = "admin";
-      exists.is_verified = true;
-      await exists.save();
-      console.log(`[Seed] Admin user updated: ${adminEmail}`);
     }
   } catch (e) {
     console.error("[Seed] Admin seed error:", e.message);
   }
-})();
+};
 
 // Seed default API keys if none exist
 (async () => {
@@ -98,6 +94,23 @@ const bcrypt = require("bcryptjs");
     console.log("[Seed] Default API keys created");
   } catch (e) {
     console.error("[Seed] API key seed error:", e.message);
+  }
+})();
+
+// Seed default automated notification configs
+(async () => {
+  try {
+    const defaults = [
+      { operation: 'tryon', enabled: true, titleTemplate: 'Try-On Complete', bodyTemplate: 'Your virtual try-on has been completed successfully.', channels: { app: true, email: true, push: true } },
+      { operation: 'recycle', enabled: true, titleTemplate: 'Recycle Ready', bodyTemplate: 'Your recycle analysis is ready with new upcycling ideas.', channels: { app: true, email: true, push: true } },
+      { operation: 'matching', enabled: true, titleTemplate: 'Match Found', bodyTemplate: 'We found new outfit matches for your wardrobe.', channels: { app: true, email: true, push: true } },
+    ];
+    for (const d of defaults) {
+      await AutomatedNotification.updateOne({ operation: d.operation }, { $set: d }, { upsert: true });
+    }
+    console.log("[Seed] Automated notification configs ready");
+  } catch (e) {
+    console.error("[Seed] Automated notification seed error:", e.message);
   }
 })();
 
@@ -130,4 +143,7 @@ app.use("/api/contact", contactRoutes);
 const apiKeyRoutes = require("./routes/apiKeyRoutes");
 app.use("/api/api-keys", apiKeyRoutes);
 
-module.exports = app;
+const automatedNotificationRoutes = require("./routes/automatedNotificationRoutes");
+app.use("/api/automated-notifications", automatedNotificationRoutes);
+
+module.exports = { app, seedAdminUser };

@@ -11,6 +11,7 @@ const {
   sendVerificationEmail,
   verifyEmail,
   googleMobileLogin,
+  changePassword,
 } = require("../controllers/authController");
 const protect = require("../middlewares/authMiddleware");
 const generateToken = require("../utils/generateToken");
@@ -228,6 +229,8 @@ router.post("/verify-otp", verifyOtp);
  *         description: Error resetting password
  */
 router.put("/reset-password", resetPassword);
+
+router.put("/change-password", protect, changePassword);
 
 /**
  * @swagger
