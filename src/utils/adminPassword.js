@@ -3,7 +3,7 @@ const fs = require('fs');
 const path = require('path');
 
 const ALGORITHM = 'aes-256-gcm';
-const KEY = crypto.createHash('sha256').update('tryon-admin-secret-key-2024').digest();
+const KEY = crypto.createHash('sha256').update(process.env.ADMIN_ENC_KEY).digest();
 const FILE = path.join(__dirname, '..', '..', 'admin.enc');
 
 function decrypt(encrypted, authTag, iv) {
