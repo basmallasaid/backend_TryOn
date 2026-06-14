@@ -3,6 +3,7 @@ const multer = require("multer");
 const protect = require("../middlewares/authMiddleware");
 const { generateVirtualTryOn, generateOutfitTryOn } = require("../services/virtualTryOn.js");
 const { classifyImage } = require("../services/classify.js");
+const { sendAutomated } = require("../services/notificationService");
 
 const router = Router();
 const upload = multer({ storage: multer.memoryStorage() });
@@ -99,6 +100,10 @@ router.post(
         prompt: req.body?.prompt || undefined,
         apiKey: req.apiKeys?.KIE_API_KEY || process.env.KIE_API_key,
       });
+
+      if (req.user?._id) {
+        sendAutomated('tryon', req.user._id, { operation: 'try-on' });
+      }
 
       res.json(result);
     } catch (err) {
@@ -243,6 +248,10 @@ router.post(
         prompt: req.body?.prompt || undefined,
         apiKey: req.apiKeys?.KIE_API_KEY || process.env.KIE_API_key,
       });
+
+      if (req.user?._id) {
+        sendAutomated('tryon', req.user._id, { operation: 'try-on' });
+      }
 
       res.json(result);
     } catch (err) {

@@ -1,20 +1,24 @@
 require("dotenv").config();
 
-const app = require("./app");
+const { app, seedAdminUser } = require("./app");
 const notificationRoutes = require("./routes/notificationRoutes");
 const avatarRoutes = require("./routes/avatarRoutes");
 const connectDB = require("./config/db");
 
-connectDB();
-app.use("/api/notifications", notificationRoutes);
-app.use("/api/avatars", avatarRoutes);
+(async () => {
+  await connectDB();
+  await seedAdminUser();
 
-app.get("/", (req, res) => {
-  res.send("TryOn Professional Backend is Online");
-});
+  app.use("/api/notifications", notificationRoutes);
+  app.use("/api/avatars", avatarRoutes);
 
-const PORT = process.env.PORT || 5000;
+  app.get("/", (req, res) => {
+    res.send("TryOn Professional Backend is Online");
+  });
 
-app.listen(PORT, () => {
-  console.log(`Server running on port ${PORT}`);
-});
+  const PORT = process.env.PORT || 5000;
+
+  app.listen(PORT, () => {
+    console.log(`Server running on port ${PORT}`);
+  });
+})();
