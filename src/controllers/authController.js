@@ -57,7 +57,7 @@ const registerUser = async (req, res) => {
 
 const loginUser = async (req, res) => {
   try {
-    const { email, password } = req.body;
+    const { email, password, expoPushToken, deviceType } = req.body;
 
     // Check fields
     if (!email || !password) {
@@ -96,6 +96,27 @@ const loginUser = async (req, res) => {
       return res.status(401).json({
         message: "Invalid email or password",
       });
+    }
+
+    // Save expo push token if provided (from mobile app)
+    if (expoPushToken) {
+      const UserToken = require("../models/UserToken");
+      try {
+        user.expoPushToken = expoPushToken;
+        await user.save();
+
+        const existing = await UserToken.findOne({ expoPushToken });
+        if (existing) {
+          if (existing.userId?.toString() !== user._id.toString()) {
+            existing.userId = user._id;
+            await existing.save();
+          }
+        } else {
+          await UserToken.create({ expoPushToken, userId: user._id, deviceType: deviceType || "mobile" });
+        }
+      } catch (e) {
+        console.error("Failed to save push token on login:", e.message);
+      }
     }
 
     // Success
@@ -417,7 +438,7 @@ const sendVerificationEmail = async (req, res) => {
 
 const googleMobileLogin = async (req, res) => {
   try {
-    const { idToken } = req.body;
+    const { idToken, expoPushToken, deviceType } = req.body;
 
     if (!idToken) {
       return res.status(400).json({ message: "idToken is required" });
@@ -441,6 +462,27 @@ const googleMobileLogin = async (req, res) => {
           last_name: payload.family_name || "",
         },
       });
+    }
+
+    // Save expo push token if provided (from mobile app)
+    if (expoPushToken) {
+      const UserToken = require("../models/UserToken");
+      try {
+        user.expoPushToken = expoPushToken;
+        await user.save();
+
+        const existing = await UserToken.findOne({ expoPushToken });
+        if (existing) {
+          if (existing.userId?.toString() !== user._id.toString()) {
+            existing.userId = user._id;
+            await existing.save();
+          }
+        } else {
+          await UserToken.create({ expoPushToken, userId: user._id, deviceType: deviceType || "mobile" });
+        }
+      } catch (e) {
+        console.error("Failed to save push token on Google login:", e.message);
+      }
     }
 
     res.status(200).json({

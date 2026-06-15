@@ -71,10 +71,6 @@ exports.analyze = async (req, res) => {
       model_used: "gpt-4o-mini",
     });
 
-    if (req.user?._id) {
-      sendAutomated('recycle', req.user._id, { operation: 'recycle' });
-    }
-
     res.json({
       success: true,
       session_id: session._id,

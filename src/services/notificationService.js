@@ -4,6 +4,7 @@ const NotificationLog = require("../models/NotificationLog");
 const Notification = require("../models/Notification");
 const AutomatedNotification = require("../models/AutomatedNotification");
 const User = require("../models/User");
+const UserToken = require("../models/UserToken");
 const sendEmail = require("../utils/sendEmail");
 
 const interpolate = (template, vars) => {
@@ -48,10 +49,26 @@ const sendAutomated = async (operation, userId, vars = {}) => {
       }
     }
 
-    if ((channels.get ? channels.get('push') : channels.push) && user.expoPushToken) {
+    if ((channels.get ? channels.get('push') : channels.push)) {
       try {
-        if (Expo.isExpoPushToken(user.expoPushToken)) {
-          await expo.sendPushNotificationsAsync([{ to: user.expoPushToken, sound: 'default', title, body }]);
+        const tokens = await UserToken.find({ userId: user._id });
+        const pushTokens = tokens.map(t => t.expoPushToken).filter(t => Expo.isExpoPushToken(t));
+
+        if (user.expoPushToken && Expo.isExpoPushToken(user.expoPushToken) && !pushTokens.includes(user.expoPushToken)) {
+          pushTokens.push(user.expoPushToken);
+        }
+
+        if (pushTokens.length > 0) {
+          const messages = pushTokens.map(token => ({
+            to: token,
+            sound: "default",
+            title,
+            body,
+          }));
+          const chunks = expo.chunkPushNotifications(messages);
+          for (const chunk of chunks) {
+            await expo.sendPushNotificationsAsync(chunk);
+          }
         }
       } catch (e) {
         console.error('Automated push failed:', e.message);

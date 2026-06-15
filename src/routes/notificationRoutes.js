@@ -390,4 +390,7 @@ router.delete("/:id", protect, notificationController.deleteNotification);
  */
 router.delete("/", protect, notificationController.clearAll);
 
+router.get("/scheduled", protect, notificationController.getScheduledNotifications);
+router.delete("/scheduled/:id", protect, notificationController.cancelScheduledNotification);
+
 module.exports = router;

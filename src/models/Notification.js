@@ -24,6 +24,15 @@ const notificationSchema = new mongoose.Schema({
     type: Boolean,
     default: false,
   },
+  scheduledAt: {
+    type: Date,
+    default: null,
+  },
+  status: {
+    type: String,
+    enum: ["pending", "sent", "failed"],
+    default: "sent",
+  },
   createdAt: {
     type: Date,
     default: Date.now,
@@ -32,5 +41,6 @@ const notificationSchema = new mongoose.Schema({
 
 notificationSchema.index({ userId: 1, read: 1 });
 notificationSchema.index({ userId: 1, createdAt: -1 });
+notificationSchema.index({ status: 1, scheduledAt: 1 });
 
 module.exports = mongoose.model("Notification", notificationSchema);

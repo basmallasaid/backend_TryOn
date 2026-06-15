@@ -79,6 +79,34 @@ exports.clearAll = async (req, res) => {
   }
 };
 
+exports.getScheduledNotifications = async (req, res) => {
+  try {
+    const notifications = await Notification.find({
+      status: "pending",
+      scheduledAt: { $gt: new Date() },
+    })
+      .populate("userId", "email profile")
+      .sort({ scheduledAt: 1 })
+      .limit(100);
+    res.status(200).json({ notifications });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+};
+
+exports.cancelScheduledNotification = async (req, res) => {
+  try {
+    const notification = await Notification.findOneAndDelete({
+      _id: req.params.id,
+      status: "pending",
+    });
+    if (!notification) return res.status(404).json({ message: "Scheduled notification not found" });
+    res.status(200).json({ message: "Scheduled notification cancelled" });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+};
+
 // Helper: create an in-app notification for a user
 exports.createInAppNotification = async (userId, title, body, type = "general") => {
   try {
@@ -173,7 +201,7 @@ exports.sendTryOnReady = async (req, res) => {
 
 exports.sendToUser = async (req, res) => {
   try {
-    const { email, title, message, data, channels = ["app"] } = req.body;
+    const { email, title, message, data, channels = ["app"], scheduledAt } = req.body;
     if (!email) return res.status(400).json({ message: "Email is required" });
 
     const user = await User.findOne({ email });
@@ -186,6 +214,22 @@ exports.sendToUser = async (req, res) => {
     const notifTitle = title || "Notification";
     const notifBody = message || "You have a new notification.";
     const results = { app: false, email: false, website: false };
+
+    const isScheduled = scheduledAt && new Date(scheduledAt) > new Date();
+
+    if (isScheduled) {
+      if (channels.includes("app")) {
+        await Notification.create({
+          userId: user._id,
+          title: notifTitle,
+          body: notifBody,
+          type: data?.type || "general",
+          scheduledAt: new Date(scheduledAt),
+          status: "pending",
+        });
+      }
+      return res.status(200).json({ message: "Notification scheduled successfully", scheduledAt });
+    }
 
     // App channel — in-app notification
     if (channels.includes("app")) {
@@ -237,7 +281,7 @@ exports.sendToUser = async (req, res) => {
 
 exports.broadcast = async (req, res) => {
   try {
-    const { title, message, data, channels = ["app"] } = req.body;
+    const { title, message, data, channels = ["app"], scheduledAt } = req.body;
 
     const users = await User.find({
       "settings.notifications_enabled": { $ne: false },
@@ -248,6 +292,21 @@ exports.broadcast = async (req, res) => {
     const notifBody = message || "Check out the latest features in TryOn!";
     const notifType = data?.type || "general";
     const results = { app: false, email: false, website: false };
+
+    const isScheduled = scheduledAt && new Date(scheduledAt) > new Date();
+
+    if (isScheduled) {
+      const scheduledNotifs = userIds.map(userId => ({
+        userId,
+        title: notifTitle,
+        body: notifBody,
+        type: notifType,
+        scheduledAt: new Date(scheduledAt),
+        status: "pending",
+      }));
+      await Notification.insertMany(scheduledNotifs);
+      return res.status(200).json({ message: "Notification scheduled successfully", scheduledAt, recipientCount: userIds.length });
+    }
 
     // App channel — in-app notifications
     if (channels.includes("app")) {

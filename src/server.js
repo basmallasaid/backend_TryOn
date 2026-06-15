@@ -4,10 +4,12 @@ const { app, seedAdminUser } = require("./app");
 const notificationRoutes = require("./routes/notificationRoutes");
 const avatarRoutes = require("./routes/avatarRoutes");
 const connectDB = require("./config/db");
+const { startScheduler } = require("./services/notificationScheduler");
 
 (async () => {
   await connectDB();
   await seedAdminUser();
+  startScheduler();
 
   app.use("/api/notifications", notificationRoutes);
   app.use("/api/avatars", avatarRoutes);
