@@ -328,7 +328,7 @@ router.get(
     passport.authenticate("google", { session: false }, (err, user, info) => {
       if (err || !user) {
         const errorMsg = encodeURIComponent(err?.message || "google_login_failed");
-        return res.redirect(`http://localhost:5173/auth/callback?error=${errorMsg}`);
+        return res.redirect(`${process.env.CLIENT_URL}/auth/callback?error=${errorMsg}`);
       }
       req.user = user;
       next();
@@ -342,7 +342,7 @@ router.get(
     const lname = req.user.profile?.last_name || "";
     const image = req.user.userImage || "";
     const role = req.user.role || "user";
-    const url = `http://localhost:5173/auth/callback?token=${token}&_id=${req.user._id}&email=${req.user.email}&role=${role}&fname=${encodeURIComponent(fname)}&lname=${encodeURIComponent(lname)}&image=${encodeURIComponent(image)}`;
+    const url = `${process.env.CLIENT_URL}/auth/callback?token=${token}&_id=${req.user._id}&email=${req.user.email}&role=${role}&fname=${encodeURIComponent(fname)}&lname=${encodeURIComponent(lname)}&image=${encodeURIComponent(image)}`;
     console.log(`[Google Callback] Redirecting to frontend callback`);
     res.redirect(url);
   },

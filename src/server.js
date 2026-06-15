@@ -1,4 +1,5 @@
-require("dotenv").config();
+const envFile = `.env.${process.env.NODE_ENV || "development"}`;
+require("dotenv").config({ path: envFile });
 
 const { app, seedAdminUser } = require("./app");
 const notificationRoutes = require("./routes/notificationRoutes");
