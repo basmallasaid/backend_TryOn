@@ -68,8 +68,27 @@ router.get("/", protect, async (req, res) => {
     const history = await Recommendation.find({ user_id: req.user._id })
       .sort({ created_at: -1 })
       .limit(limit)
-      .skip(skip);
-    res.json({ history });
+      .skip(skip)
+      .lean();
+
+    const sanitized = history.map((rec) => ({
+      ...rec,
+      outfits: (rec.outfits || []).map((outfit) => {
+        const topItem = outfit.items?.find(i => i.category === 'top');
+        const bottomItem = outfit.items?.find(i => i.category === 'bottom');
+        return {
+          ...outfit,
+          items: (outfit.items || []).map((item) => ({
+            ...item,
+            image: null,
+          })),
+          top_id: topItem?._id || topItem?.id || null,
+          bottom_id: bottomItem?._id || bottomItem?.id || null,
+        };
+      }),
+    }));
+
+    res.json({ history: sanitized });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -130,6 +149,10 @@ router.get("/", protect, async (req, res) => {
  *                       weather:
  *                         type: object
  *                       compositeImage:
+ *                         type: string
+ *                       top_id:
+ *                         type: string
+ *                       bottom_id:
  *                         type: string
  *                 weather:
  *                   $ref: '#/components/schemas/WeatherData'
@@ -248,9 +271,14 @@ router.post("/", protect, async (req, res) => {
     const responseOutfits = enriched.map((o) => ({
       score: o.score,
       breakdown: o.breakdown,
-      items: o.items,
+      items: (o.items || []).map((item) => ({
+        ...item,
+        image: null,
+      })),
       weather: o.weather,
       compositeImage: o.compositeImage,
+      top_id: o.top_id,
+      bottom_id: o.bottom_id,
     }));
 
     res.json({ outfits: responseOutfits, weather: weatherData });
