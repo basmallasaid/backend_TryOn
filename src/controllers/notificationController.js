@@ -9,10 +9,13 @@ const sendEmail = require("../utils/sendEmail");
 
 exports.getNotifications = async (req, res) => {
   try {
-    const notifications = await Notification.find({ userId: req.user._id })
+    const notifications = await Notification.find({
+      userId: req.user._id,
+      status: { $ne: "pending" },
+    })
       .sort({ createdAt: -1 })
       .limit(50);
-    const unreadCount = await Notification.countDocuments({ userId: req.user._id, read: false });
+    const unreadCount = await Notification.countDocuments({ userId: req.user._id, read: false, status: { $ne: "pending" } });
     res.status(200).json({ notifications, unreadCount });
   } catch (error) {
     res.status(500).json({ error: error.message });
@@ -21,7 +24,7 @@ exports.getNotifications = async (req, res) => {
 
 exports.getAllNotifications = async (req, res) => {
   try {
-    const notifications = await Notification.find()
+    const notifications = await Notification.find({ status: { $ne: "pending" } })
       .populate('userId', 'email profile')
       .sort({ createdAt: -1 })
       .limit(100);

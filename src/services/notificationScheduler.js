@@ -23,6 +23,7 @@ const processScheduledNotifications = async () => {
           continue;
         }
 
+        // Send push notification
         const tokens = await UserToken.find({ userId: user._id });
         const pushTokens = tokens.map(t => t.expoPushToken).filter(t => Expo.isExpoPushToken(t));
 
@@ -39,7 +40,22 @@ const processScheduledNotifications = async () => {
           }
         }
 
+        // Send email
+        if (user.email) {
+          try {
+            await sendEmail({
+              email: user.email,
+              subject: notif.title,
+              message: notif.body,
+            });
+          } catch (e) {
+            console.error(`[Scheduler] Email failed for ${user.email}:`, e.message);
+          }
+        }
+
+        // Mark as sent — backdate createdAt to scheduledAt so it appears at the top with the correct date
         notif.status = "sent";
+        notif.createdAt = notif.scheduledAt;
         await notif.save();
       } catch (err) {
         console.error(`[Scheduler] Failed to send notification ${notif._id}:`, err.message);
