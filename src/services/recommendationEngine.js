@@ -654,12 +654,12 @@ function getCompatibleCategories(category) {
   }
 }
 
-function scoreItemPair(item1, item2) {
+function scoreItemPair(item1, item2, precomputedGender) {
   const colorRaw = scoreColorCompatibility(item1, item2);
   const styleRaw = scoreStyle(item1.style, item2.style);
   const seasonRaw = scoreSeason(item1, item2);
   const patternRaw = scorePattern(item1.pattern, item2.pattern);
-  const genderRaw = getGenderCompatibility(item1, item2);
+  const genderRaw = precomputedGender !== undefined ? precomputedGender : getGenderCompatibility(item1, item2);
 
   const catsOk = categoriesCompatible(item1.category, item2.category);
   const categoryRaw = catsOk ? 10 : 0;
@@ -695,30 +695,27 @@ function scoreItemPair(item1, item2) {
 
 function findMatchesForItem(uploadedItem, wardrobe) {
   const compatibleCats = getCompatibleCategories(uploadedItem.category);
-  const candidates = wardrobe.filter(
-    (w) =>
-      compatibleCats.includes(w.category) &&
-      w.id !== uploadedItem.id &&
-      getGenderCompatibility(uploadedItem, w) >= 2,
-  );
+  const catSet = new Set(compatibleCats);
+  const results = [];
 
-  return candidates
-    .map((candidate) => {
-      const { total, reason, raw } = scoreItemPair(uploadedItem, candidate);
-      return {
-        item: candidate,
-        score: total,
-        reason,
-        raw,
-        explanation: generateMatchExplanation(
-          uploadedItem,
-          candidate,
-          reason,
-          raw,
-        ),
-      };
-    })
-    .sort((a, b) => b.score - a.score);
+  for (let i = 0; i < wardrobe.length; i++) {
+    const w = wardrobe[i];
+    if (!catSet.has(w.category)) continue;
+    if (w.id === uploadedItem.id) continue;
+    const genderScore = getGenderCompatibility(uploadedItem, w);
+    if (genderScore < 2) continue;
+
+    const { total, reason, raw } = scoreItemPair(uploadedItem, w, genderScore);
+    results.push({
+      item: w,
+      score: total,
+      reason,
+      raw,
+      explanation: generateMatchExplanation(uploadedItem, w, reason, raw),
+    });
+  }
+
+  return results.sort((a, b) => b.score - a.score);
 }
 
 function getTopMatches(uploadedItem, wardrobe, limit = 8) {

@@ -259,4 +259,39 @@ router.post("/", protect, async (req, res) => {
   }
 });
 
+/**
+ * @swagger
+ * /api/recommendations:
+ *   delete:
+ *     summary: Delete all recommendations for the authenticated user
+ *     description: Removes all saved outfit recommendations for the current user.
+ *     tags: [Recommendations]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Recommendations deleted successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: All recommendations deleted
+ *                 deletedCount:
+ *                   type: integer
+ *                   example: 5
+ *       401:
+ *         description: Not authenticated
+ */
+router.delete("/", protect, async (req, res) => {
+  try {
+    const result = await Recommendation.deleteMany({ user_id: req.user._id });
+    res.json({ message: "All recommendations deleted", deletedCount: result.deletedCount });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 module.exports = router;

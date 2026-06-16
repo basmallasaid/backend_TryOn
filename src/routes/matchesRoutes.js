@@ -10,6 +10,10 @@ const { analyzeClothing, imageUrlToDataUrl } = require("../services/analyze");
 const { getItemColors } = require("../services/normalizer");
 const { sendAutomated } = require("../services/notificationService");
 
+const WARDROBE_SELECT = "name type category colors color style pattern season gender";
+const PRODUCT_SELECT = "name category color_tags season_tags price currency purchase_url store_id analysis_id is_active";
+const ANALYSIS_SELECT = "product_id garments";
+
 function analysisToEngineItem(garment) {
   return {
     id: "__uploaded__",
@@ -125,7 +129,8 @@ router.get("/", protect, async (req, res) => {
     const history = await MatchHistory.find({ user_id: req.user._id })
       .sort({ created_at: -1 })
       .limit(limit)
-      .skip(skip);
+      .skip(skip)
+      .lean();
     res.json({ history });
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -241,36 +246,51 @@ router.post("/", protect, async (req, res) => {
       return res.status(400).json({ error: "wardrobe_item_id is required" });
     }
 
+    const t0 = Date.now();
+
     const sourceItem = await WardrobeItem.findOne({
       _id: wardrobe_item_id,
       user_id: req.user._id,
-    });
+    })
+      .lean()
+      .select(WARDROBE_SELECT);
     if (!sourceItem) {
       return res.status(404).json({ error: "Wardrobe item not found" });
     }
 
+    const t1 = Date.now();
+
+    const weatherPromise = (lat !== undefined && lon !== undefined)
+      ? getWeather(Number(lat), Number(lon)).catch(() => null)
+      : Promise.resolve(null);
+
     const [allItems, rawProducts] = await Promise.all([
-      WardrobeItem.find({ user_id: req.user._id, _id: { $ne: sourceItem._id } }),
-      Product.find({ is_active: true }),
+      WardrobeItem.find({ user_id: req.user._id, _id: { $ne: sourceItem._id } })
+        .lean()
+        .select(WARDROBE_SELECT),
+      Product.find({ is_active: true })
+        .lean()
+        .select(PRODUCT_SELECT),
     ]);
 
-    let weatherData = null;
-    if (lat !== undefined && lon !== undefined) {
-      try {
-        weatherData = await getWeather(Number(lat), Number(lon));
-      } catch {
-        // weather fetch failed silently - return results without weather
-      }
-    }
+    const t2 = Date.now();
+
+    const weatherData = await weatherPromise;
+
+    const t3 = Date.now();
 
     const productIdsWithAnalysis = rawProducts.filter((p) => p.analysis_id).map((p) => p.analysis_id);
     const productAnalyses = productIdsWithAnalysis.length
       ? await Analysis.find({ _id: { $in: productIdsWithAnalysis } })
+          .lean()
+          .select(ANALYSIS_SELECT)
       : [];
     const analysisMap = {};
     for (const a of productAnalyses) {
       if (a.product_id) analysisMap[a.product_id.toString()] = a;
     }
+
+    const t4 = Date.now();
 
     const uploadedItem = toEngineItem(sourceItem);
     const wardrobeCandidates = allItems.map(toEngineItem);
@@ -279,6 +299,8 @@ router.post("/", protect, async (req, res) => {
     );
 
     const allCandidates = [...wardrobeCandidates, ...productCandidates];
+
+    const t5 = Date.now();
 
     const matches = findMatchesForItem(uploadedItem, allCandidates).map((m) => {
       const candidate = m.item;
@@ -311,6 +333,8 @@ router.post("/", protect, async (req, res) => {
       });
     }
 
+    const t6 = Date.now();
+
     await MatchHistory.create({
       user_id: req.user._id,
       source_garment: uploadedItem,
@@ -319,6 +343,10 @@ router.post("/", protect, async (req, res) => {
     });
 
     sendAutomated('matching', req.user._id, { operation: 'matching' });
+
+    const t7 = Date.now();
+
+    console.log(`[PERF] POST /api/matches :: total=${t7 - t0}ms findOne=${t1 - t0}ms dbFetch=${t2 - t1}ms weather=${t3 - t2}ms analysis=${t4 - t3}ms transform=${t5 - t4}ms scoring=${t6 - t5}ms saveHistory=${t7 - t6}ms candidates=${allCandidates.length} matches=${matches.length}`);
 
     res.json({ matches, weather: weatherData });
   } catch (err) {
@@ -373,7 +401,9 @@ router.post("/product/:productId", protect, async (req, res) => {
     let garment;
 
     if (product.analysis_id) {
-      const savedAnalysis = await Analysis.findById(product.analysis_id);
+      const savedAnalysis = await Analysis.findById(product.analysis_id)
+        .lean()
+        .select(ANALYSIS_SELECT);
       if (savedAnalysis && savedAnalysis.garments && savedAnalysis.garments.length) {
         analysis = savedAnalysis;
         garment = savedAnalysis.garments[0];
@@ -437,7 +467,9 @@ router.post("/product/:productId", protect, async (req, res) => {
       },
     };
 
-    const wardrobeItems = await WardrobeItem.find({ user_id: req.user._id });
+    const wardrobeItems = await WardrobeItem.find({ user_id: req.user._id })
+      .lean()
+      .select(WARDROBE_SELECT);
     if (!wardrobeItems.length) {
       return res.json({ matches: [], analyzedProduct });
     }
@@ -491,7 +523,9 @@ router.post("/analysis/:analysisId", protect, async (req, res) => {
     const analysis = await Analysis.findOne({
       _id: req.params.analysisId,
       user_id: req.user._id,
-    });
+    })
+      .lean()
+      .select(ANALYSIS_SELECT);
     if (!analysis) {
       return res.status(404).json({ error: "Analysis not found" });
     }
@@ -502,23 +536,26 @@ router.post("/analysis/:analysisId", protect, async (req, res) => {
 
     const { lat, lon } = req.body;
 
-    let weatherData = null;
-    if (lat !== undefined && lon !== undefined) {
-      try {
-        weatherData = await getWeather(Number(lat), Number(lon));
-      } catch {
-        // weather fetch failed silently
-      }
-    }
+    const weatherPromise = (lat !== undefined && lon !== undefined)
+      ? getWeather(Number(lat), Number(lon)).catch(() => null)
+      : Promise.resolve(null);
 
     const [wardrobeItems, rawProducts] = await Promise.all([
-      WardrobeItem.find({ user_id: req.user._id }),
-      Product.find({ is_active: true }),
+      WardrobeItem.find({ user_id: req.user._id })
+        .lean()
+        .select(WARDROBE_SELECT),
+      Product.find({ is_active: true })
+        .lean()
+        .select(PRODUCT_SELECT),
     ]);
+
+    const weatherData = await weatherPromise;
 
     const productIdsWithAnalysis = rawProducts.filter((p) => p.analysis_id).map((p) => p.analysis_id);
     const productAnalyses = productIdsWithAnalysis.length
       ? await Analysis.find({ _id: { $in: productIdsWithAnalysis } })
+          .lean()
+          .select(ANALYSIS_SELECT)
       : [];
     const analysisMap = {};
     for (const a of productAnalyses) {

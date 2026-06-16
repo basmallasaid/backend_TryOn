@@ -52,6 +52,7 @@ const productSchema = new mongoose.Schema(
     is_active: {
       type: Boolean,
       default: true,
+      index: true,
     },
     analysis_id: {
       type: mongoose.Schema.Types.ObjectId,
