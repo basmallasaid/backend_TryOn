@@ -498,9 +498,10 @@ const googleMobileLogin = async (req, res) => {
       } catch (e) {
         console.error("Failed to save push token on Google login:", e.message);
       }
-    }
+    }    
 
     res.status(200).json({
+      _id: user._id,
       email: user.email,
       token: generateToken(user._id),
     });
