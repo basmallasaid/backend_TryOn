@@ -2,6 +2,7 @@ const express = require("express");
 const router = express.Router();
 const storeController = require("../controllers/storeController");
 const protect = require("../middlewares/authMiddleware");
+const adminOnly = require("../middlewares/adminMiddleware");
 
 /**
  * @swagger
@@ -50,7 +51,7 @@ const protect = require("../middlewares/authMiddleware");
  *       401:
  *         description: Not authenticated
  */
-router.post("/", protect, storeController.createStore);
+router.post("/", protect, adminOnly, storeController.createStore);
 
 /**
  * @swagger
@@ -176,7 +177,7 @@ router.get("/:id", protect, storeController.getStoreById);
  *       401:
  *         description: Not authenticated
  */
-router.put("/:id", protect, storeController.updateStore);
+router.put("/:id", protect, adminOnly, storeController.updateStore);
 
 /**
  * @swagger
@@ -208,6 +209,6 @@ router.put("/:id", protect, storeController.updateStore);
  *       401:
  *         description: Not authenticated
  */
-router.delete("/:id", protect, storeController.deleteStore);
+router.delete("/:id", protect, adminOnly, storeController.deleteStore);
 
 module.exports = router;

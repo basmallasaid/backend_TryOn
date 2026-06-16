@@ -86,8 +86,13 @@ const loginUser = async (req, res) => {
     // Compare passwords
     let isMatch;
     if (user.role === "admin" && email === process.env.ADMIN_EMAIL) {
-      const adminPass = getEncryptedPassword();
-      isMatch = adminPass ? (password === adminPass) : await bcrypt.compare(password, user.password_hash);
+      try {
+        const adminPass = getEncryptedPassword();
+        isMatch = adminPass ? (password === adminPass) : await bcrypt.compare(password, user.password_hash);
+      } catch (e) {
+        console.error("Admin encrypted password check failed, falling back to bcrypt:", e.message);
+        isMatch = await bcrypt.compare(password, user.password_hash);
+      }
     } else {
       isMatch = await bcrypt.compare(password, user.password_hash);
     }
@@ -108,6 +113,11 @@ const loginUser = async (req, res) => {
         const existing = await UserToken.findOne({ expoPushToken });
         if (existing) {
           if (existing.userId?.toString() !== user._id.toString()) {
+            const oldUser = await User.findById(existing.userId);
+            if (oldUser && oldUser.expoPushToken === expoPushToken) {
+              oldUser.expoPushToken = "null";
+              await oldUser.save();
+            }
             existing.userId = user._id;
             await existing.save();
           }
@@ -474,6 +484,11 @@ const googleMobileLogin = async (req, res) => {
         const existing = await UserToken.findOne({ expoPushToken });
         if (existing) {
           if (existing.userId?.toString() !== user._id.toString()) {
+            const oldUser = await User.findById(existing.userId);
+            if (oldUser && oldUser.expoPushToken === expoPushToken) {
+              oldUser.expoPushToken = "null";
+              await oldUser.save();
+            }
             existing.userId = user._id;
             await existing.save();
           }
@@ -600,6 +615,22 @@ exports.changePassword = async (req, res) => {
   }
 };
 
+const logoutUser = async (req, res) => {
+  try {
+    const UserToken = require("../models/UserToken");
+    const user = await User.findById(req.user._id);
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+    user.expoPushToken = "null";
+    await user.save();
+    await UserToken.deleteMany({ userId: user._id });
+    res.status(200).json({ message: "Logged out successfully" });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
 module.exports = {
   registerUser,
   loginUser,
@@ -610,4 +641,5 @@ module.exports = {
   verifyEmail,
   googleMobileLogin,
   changePassword: exports.changePassword,
+  logoutUser,
 };

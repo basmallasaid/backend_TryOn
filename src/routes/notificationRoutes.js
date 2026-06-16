@@ -2,6 +2,7 @@ const express = require("express");
 const router = express.Router();
 const notificationController = require("../controllers/notificationController");
 const protect = require("../middlewares/authMiddleware");
+const adminOnly = require("../middlewares/adminMiddleware");
 
 /**
  * @swagger
@@ -87,7 +88,7 @@ router.post("/register", protect, notificationController.registerToken);
  *       404:
  *         description: User not found
  */
-router.post("/send-by-email", protect, notificationController.sendNotificationsByEmail);
+router.post("/send-by-email", protect, adminOnly, notificationController.sendNotificationsByEmail);
 
 /**
  * @swagger
@@ -122,7 +123,7 @@ router.post("/send-by-email", protect, notificationController.sendNotificationsB
  *       401:
  *         description: Not authenticated
  */
-router.post("/send-test", protect, notificationController.sendToAll);
+router.post("/send-test", protect, adminOnly, notificationController.sendToAll);
 
 /**
  * @swagger
@@ -216,7 +217,7 @@ router.post("/tryon-ready", protect, notificationController.sendTryOnReady);
  *       404:
  *         description: User not found
  */
-router.post("/send-to-user", protect, notificationController.sendToUser);
+router.post("/send-to-user", protect, adminOnly, notificationController.sendToUser);
 
 /**
  * @swagger
@@ -264,7 +265,7 @@ router.post("/send-to-user", protect, notificationController.sendToUser);
  *       401:
  *         description: Not authenticated
  */
-router.post("/broadcast", protect, notificationController.broadcast);
+router.post("/broadcast", protect, adminOnly, notificationController.broadcast);
 
 /**
  * @swagger
@@ -306,7 +307,7 @@ router.post("/broadcast", protect, notificationController.broadcast);
  *         description: Not authenticated
  */
 router.get("/", protect, notificationController.getNotifications);
-router.get("/all", protect, notificationController.getAllNotifications);
+router.get("/all", protect, adminOnly, notificationController.getAllNotifications);
 
 /**
  * @swagger
@@ -390,7 +391,7 @@ router.delete("/:id", protect, notificationController.deleteNotification);
  */
 router.delete("/", protect, notificationController.clearAll);
 
-router.get("/scheduled", protect, notificationController.getScheduledNotifications);
-router.delete("/scheduled/:id", protect, notificationController.cancelScheduledNotification);
+router.get("/scheduled", protect, adminOnly, notificationController.getScheduledNotifications);
+router.delete("/scheduled/:id", protect, adminOnly, notificationController.cancelScheduledNotification);
 
 module.exports = router;

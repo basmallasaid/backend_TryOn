@@ -1,5 +1,6 @@
 const Notification = require("../models/Notification");
 const User = require("../models/User");
+const UserToken = require("../models/UserToken");
 const { Expo } = require("expo-server-sdk");
 const sendEmail = require("../utils/sendEmail");
 
@@ -22,15 +23,20 @@ const processScheduledNotifications = async () => {
           continue;
         }
 
-        if (user.expoPushToken && Expo.isExpoPushToken(user.expoPushToken)) {
-          await expo.sendPushNotificationsAsync([
-            {
-              to: user.expoPushToken,
-              sound: "default",
-              title: notif.title,
-              body: notif.body,
-            },
-          ]);
+        const tokens = await UserToken.find({ userId: user._id });
+        const pushTokens = tokens.map(t => t.expoPushToken).filter(t => Expo.isExpoPushToken(t));
+
+        if (pushTokens.length > 0) {
+          const messages = pushTokens.map(token => ({
+            to: token,
+            sound: "default",
+            title: notif.title,
+            body: notif.body,
+          }));
+          const chunks = expo.chunkPushNotifications(messages);
+          for (const chunk of chunks) {
+            await expo.sendPushNotificationsAsync(chunk);
+          }
         }
 
         notif.status = "sent";

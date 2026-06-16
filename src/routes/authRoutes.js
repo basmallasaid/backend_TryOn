@@ -12,6 +12,7 @@ const {
   verifyEmail,
   googleMobileLogin,
   changePassword,
+  logoutUser,
 } = require("../controllers/authController");
 const protect = require("../middlewares/authMiddleware");
 const generateToken = require("../utils/generateToken");
@@ -231,6 +232,8 @@ router.post("/verify-otp", verifyOtp);
 router.put("/reset-password", resetPassword);
 
 router.put("/change-password", protect, changePassword);
+
+router.post("/logout", protect, logoutUser);
 
 /**
  * @swagger

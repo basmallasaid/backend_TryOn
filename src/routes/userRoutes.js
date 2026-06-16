@@ -23,6 +23,7 @@ const {
 } = require("../controllers/userController");
 
 const protect = require("../middlewares/authMiddleware");
+const adminOnly = require("../middlewares/adminMiddleware");
 
 const router = express.Router();
 
@@ -622,12 +623,12 @@ router.delete("/user-image", protect, deleteUserImage);
 
 const { getAllUsers, getUserStats, createAdminUser, deleteUser, markUserDeletionNotified, updateUser } = require("../controllers/userController");
 
-router.get("/stats", protect, getUserStats);
-router.get("/", protect, getAllUsers);
-router.post("/", protect, createAdminUser);
-router.patch("/:id/mark-notified", protect, markUserDeletionNotified);
-router.put("/:id", protect, updateUser);
-router.delete("/:id", protect, deleteUser);
+router.get("/stats", protect, adminOnly, getUserStats);
+router.get("/", protect, adminOnly, getAllUsers);
+router.post("/", protect, adminOnly, createAdminUser);
+router.patch("/:id/mark-notified", protect, adminOnly, markUserDeletionNotified);
+router.put("/:id", protect, adminOnly, updateUser);
+router.delete("/:id", protect, adminOnly, deleteUser);
 
 router.get("/:id", protect, getUserById);
 

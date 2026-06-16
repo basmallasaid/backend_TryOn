@@ -215,7 +215,9 @@ exports.sendToUser = async (req, res) => {
     const notifBody = message || "You have a new notification.";
     const results = { app: false, email: false, website: false };
 
-    const isScheduled = scheduledAt && new Date(scheduledAt) > new Date();
+    const MIN_SCHEDULE_BUFFER_MS = 2 * 60 * 1000;
+    const scheduledDate = scheduledAt ? new Date(scheduledAt) : null;
+    const isScheduled = scheduledDate && scheduledDate.getTime() > Date.now() + MIN_SCHEDULE_BUFFER_MS;
 
     if (isScheduled) {
       if (channels.includes("app")) {
@@ -223,21 +225,19 @@ exports.sendToUser = async (req, res) => {
           userId: user._id,
           title: notifTitle,
           body: notifBody,
-          type: data?.type || "general",
-          scheduledAt: new Date(scheduledAt),
+          type: "scheduled",
+          scheduledAt: scheduledDate,
           status: "pending",
         });
       }
       return res.status(200).json({ message: "Notification scheduled successfully", scheduledAt });
     }
 
-    // App channel — in-app notification
     if (channels.includes("app")) {
       await exports.createInAppNotification(user._id, notifTitle, notifBody, data?.type || "general");
       results.app = true;
     }
 
-    // Email channel
     if (channels.includes("email")) {
       try {
         await sendEmail({
@@ -252,7 +252,6 @@ exports.sendToUser = async (req, res) => {
       }
     }
 
-    // Website channel — push notification via Expo
     let deviceCount = 0;
     if (channels.includes("website")) {
       const tokens = await UserToken.find({ userId: user._id });
@@ -262,13 +261,6 @@ exports.sendToUser = async (req, res) => {
           notifTitle, notifBody, data || {}
         );
         deviceCount = tokens.length;
-        results.website = true;
-      } else if (user.expoPushToken) {
-        await sendNotification(
-          [{ expoPushToken: user.expoPushToken }],
-          notifTitle, notifBody, data || {}
-        );
-        deviceCount = 1;
         results.website = true;
       }
     }
@@ -293,15 +285,17 @@ exports.broadcast = async (req, res) => {
     const notifType = data?.type || "general";
     const results = { app: false, email: false, website: false };
 
-    const isScheduled = scheduledAt && new Date(scheduledAt) > new Date();
+    const MIN_SCHEDULE_BUFFER_MS = 2 * 60 * 1000;
+    const scheduledDate = scheduledAt ? new Date(scheduledAt) : null;
+    const isScheduled = scheduledDate && scheduledDate.getTime() > Date.now() + MIN_SCHEDULE_BUFFER_MS;
 
     if (isScheduled) {
       const scheduledNotifs = userIds.map(userId => ({
         userId,
         title: notifTitle,
         body: notifBody,
-        type: notifType,
-        scheduledAt: new Date(scheduledAt),
+        type: "scheduled",
+        scheduledAt: scheduledDate,
         status: "pending",
       }));
       await Notification.insertMany(scheduledNotifs);
@@ -341,7 +335,6 @@ exports.broadcast = async (req, res) => {
       results.emailCount = emailCount;
     }
 
-    // Website channel — push notifications via Expo
     let deviceCount = 0;
     if (channels.includes("website")) {
       const tokens = await UserToken.find({ userId: { $in: userIds } });

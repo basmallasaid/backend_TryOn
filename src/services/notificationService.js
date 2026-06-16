@@ -33,7 +33,7 @@ const sendAutomated = async (operation, userId, vars = {}) => {
         userId: user._id,
         title,
         body,
-        type: 'general',
+        type: 'automated',
       });
     }
 
@@ -53,10 +53,6 @@ const sendAutomated = async (operation, userId, vars = {}) => {
       try {
         const tokens = await UserToken.find({ userId: user._id });
         const pushTokens = tokens.map(t => t.expoPushToken).filter(t => Expo.isExpoPushToken(t));
-
-        if (user.expoPushToken && Expo.isExpoPushToken(user.expoPushToken) && !pushTokens.includes(user.expoPushToken)) {
-          pushTokens.push(user.expoPushToken);
-        }
 
         if (pushTokens.length > 0) {
           const messages = pushTokens.map(token => ({
