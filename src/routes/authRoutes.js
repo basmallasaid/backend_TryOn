@@ -295,22 +295,21 @@ router.get("/verify-email/:token", verifyEmail);
  */
 function checkGoogleStrategy(req, res, next) {
   if (!passport._strategy("google")) {
-    return res.status(500).json({ message: "Google Sign-In is not configured" });
+    return res
+      .status(500)
+      .json({ message: "Google Sign-In is not configured" });
   }
   next();
 }
 
-router.get(
-  "/google",
-  checkGoogleStrategy,
-  (req, res, next) => {
-    passport.authenticate("google", {
-      scope: ["profile", "email"],
-      device_id: req.query.device_id,
-      device_name: req.query.device_name,
-    })(req, res, next);
-  },
-);
+router.get("/google", checkGoogleStrategy, (req, res, next) => {
+  passport.authenticate("google", {
+    scope: ["profile", "email"],
+    device_id: req.query.device_id,
+    device_name: req.query.device_name,
+    hl: req.query.lang || "en",
+  })(req, res, next);
+});
 
 /**
  * @swagger
@@ -330,8 +329,12 @@ router.get(
   (req, res, next) => {
     passport.authenticate("google", { session: false }, (err, user, info) => {
       if (err || !user) {
-        const errorMsg = encodeURIComponent(err?.message || "google_login_failed");
-        return res.redirect(`${process.env.CLIENT_URL}/auth/callback?error=${errorMsg}`);
+        const errorMsg = encodeURIComponent(
+          err?.message || "google_login_failed",
+        );
+        return res.redirect(
+          `${process.env.CLIENT_URL}/auth/callback?error=${errorMsg}`,
+        );
       }
       req.user = user;
       next();
@@ -339,7 +342,9 @@ router.get(
   },
 
   (req, res) => {
-    console.log(`[Google Callback] User authenticated: ${req.user?._id} / ${req.user?.email}`);
+    console.log(
+      `[Google Callback] User authenticated: ${req.user?._id} / ${req.user?.email}`,
+    );
     const token = generateToken(req.user._id);
     const fname = req.user.profile?.first_name || "";
     const lname = req.user.profile?.last_name || "";

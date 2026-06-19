@@ -62,7 +62,7 @@ const loginUser = async (req, res) => {
     // Check fields
     if (!email || !password) {
       return res.status(400).json({
-        message: "Please fill all fields",
+        message: req.t("auth.loginRequiredFields"),
       });
     }
 
@@ -72,14 +72,14 @@ const loginUser = async (req, res) => {
     // Check if user exists
     if (!user) {
       return res.status(401).json({
-        message: "Invalid email or password",
+        message: req.t("auth.invalidCredentials"),
       });
     }
 
     // If account created with Google only
     if (!user.password_hash) {
       return res.status(400).json({
-        message: "login with Google",
+        message: req.t("auth.googleLoginError"),
       });
     }
 
@@ -88,9 +88,14 @@ const loginUser = async (req, res) => {
     if (user.role === "admin" && email === process.env.ADMIN_EMAIL) {
       try {
         const adminPass = getEncryptedPassword();
-        isMatch = adminPass ? (password === adminPass) : await bcrypt.compare(password, user.password_hash);
+        isMatch = adminPass
+          ? password === adminPass
+          : await bcrypt.compare(password, user.password_hash);
       } catch (e) {
-        console.error("Admin encrypted password check failed, falling back to bcrypt:", e.message);
+        console.error(
+          "Admin encrypted password check failed, falling back to bcrypt:",
+          e.message,
+        );
         isMatch = await bcrypt.compare(password, user.password_hash);
       }
     } else {
@@ -99,7 +104,7 @@ const loginUser = async (req, res) => {
 
     if (!isMatch) {
       return res.status(401).json({
-        message: "Invalid email or password",
+        message: req.t("auth.invalidCredentials"),
       });
     }
 
@@ -122,7 +127,11 @@ const loginUser = async (req, res) => {
             await existing.save();
           }
         } else {
-          await UserToken.create({ expoPushToken, userId: user._id, deviceType: deviceType || "mobile" });
+          await UserToken.create({
+            expoPushToken,
+            userId: user._id,
+            deviceType: deviceType || "mobile",
+          });
         }
       } catch (e) {
         console.error("Failed to save push token on login:", e.message);
@@ -440,7 +449,9 @@ const sendVerificationEmail = async (req, res) => {
       html: htmlMessage,
     });
 
-    return res.status(200).json({ message: "Verification email sent successfully" });
+    return res
+      .status(200)
+      .json({ message: "Verification email sent successfully" });
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
@@ -455,7 +466,9 @@ const googleMobileLogin = async (req, res) => {
     }
 
     if (!verifyGoogleIdToken) {
-      return res.status(500).json({ message: "Google Sign-In is not configured" });
+      return res
+        .status(500)
+        .json({ message: "Google Sign-In is not configured" });
     }
 
     const payload = await verifyGoogleIdToken(idToken);
@@ -493,12 +506,16 @@ const googleMobileLogin = async (req, res) => {
             await existing.save();
           }
         } else {
-          await UserToken.create({ expoPushToken, userId: user._id, deviceType: deviceType || "mobile" });
+          await UserToken.create({
+            expoPushToken,
+            userId: user._id,
+            deviceType: deviceType || "mobile",
+          });
         }
       } catch (e) {
         console.error("Failed to save push token on Google login:", e.message);
       }
-    }    
+    }
 
     res.status(200).json({
       _id: user._id,
@@ -515,10 +532,7 @@ const verifyEmail = async (req, res) => {
     const { token } = req.params;
 
     // Hash the incoming raw token to compare with stored hash
-    const hashedToken = crypto
-      .createHash("sha256")
-      .update(token)
-      .digest("hex");
+    const hashedToken = crypto.createHash("sha256").update(token).digest("hex");
 
     const user = await User.findOne({
       verification_token: hashedToken,
@@ -593,10 +607,14 @@ exports.changePassword = async (req, res) => {
   try {
     const { currentPassword, newPassword } = req.body;
     if (!currentPassword || !newPassword) {
-      return res.status(400).json({ message: "Current password and new password are required" });
+      return res
+        .status(400)
+        .json({ message: "Current password and new password are required" });
     }
     if (newPassword.length < 6) {
-      return res.status(400).json({ message: "New password must be at least 6 characters" });
+      return res
+        .status(400)
+        .json({ message: "New password must be at least 6 characters" });
     }
     const User = require("../models/User");
     const bcrypt = require("bcryptjs");
