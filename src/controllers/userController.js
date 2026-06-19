@@ -62,13 +62,16 @@ const getSettings = async (req, res) => {
       return res.status(404).json({ message: "User not found" });
     }
 
+    const UserToken = require("../models/UserToken");
+    const hasToken = await UserToken.exists({ userId: req.user._id });
+
     res.status(200).json({
       language: user.settings?.language || "en",
       notifications_enabled:
         user.settings?.notifications_enabled !== undefined
           ? user.settings.notifications_enabled
           : true,
-      has_mobile_app: user.settings?.has_mobile_app || false,
+      has_mobile_app: hasToken ? true : (user.settings?.has_mobile_app || false),
       subscriptionId: user.subscriptionId || null,
       subscriptionStatus: user.subscriptionStatus || null,
       subscriptionEndDate: user.subscriptionEndDate || null,
@@ -133,6 +136,13 @@ const getUserById = async (req, res) => {
 
     const user = await User.findById(req.params.id).select("-password_hash -verification_token -verification_token_expires -reset_token -reset_token_expires");
     if (!user) return res.status(404).json({ message: "User not found" });
+
+    const UserToken = require("../models/UserToken");
+    const hasToken = await UserToken.exists({ userId: user._id });
+    if (hasToken && user.settings) {
+      user.settings.has_mobile_app = true;
+    }
+
     res.json({ user });
   } catch (error) {
     res.status(500).json({ message: error.message });
@@ -516,7 +526,7 @@ const createAdminUser = async (req, res) => {
     if (req.user.role !== "admin") {
       return res.status(403).json({ message: "Admin access required" });
     }
-    const { email, password, first_name, last_name, role: userRole } = req.body;
+    const { email, password, first_name, last_name, role: userRole, subscriptionStatus, subscriptionInterval } = req.body;
     if (!email || !password) {
       return res.status(400).json({ message: "Email and password are required" });
     }
@@ -534,6 +544,8 @@ const createAdminUser = async (req, res) => {
       role: userRole || "user",
       profile: { first_name: first_name || null, last_name: last_name || null },
       is_verified: true,
+      subscriptionStatus: subscriptionStatus || null,
+      subscriptionInterval: subscriptionInterval || null,
     });
     res.status(201).json({
       _id: user._id,
@@ -593,7 +605,7 @@ const updateUser = async (req, res) => {
     if (!user) {
       return res.status(404).json({ message: "User not found" });
     }
-    const { email, password, first_name, last_name, role } = req.body;
+    const { email, password, first_name, last_name, role, subscriptionStatus, subscriptionInterval } = req.body;
     if (user.email === "redolapy.admin@gmail.com" && role && role !== "admin") {
       return res.status(400).json({ message: "Cannot change role of the main admin account" });
     }
@@ -613,6 +625,8 @@ const updateUser = async (req, res) => {
     if (first_name !== undefined) user.profile.first_name = first_name;
     if (last_name !== undefined) user.profile.last_name = last_name;
     if (role) user.role = role;
+    if (subscriptionStatus !== undefined) user.subscriptionStatus = subscriptionStatus;
+    if (subscriptionInterval !== undefined) user.subscriptionInterval = subscriptionInterval;
     await user.save();
     res.status(200).json({
       _id: user._id,

@@ -60,6 +60,8 @@ const sendAutomated = async (operation, userId, vars = {}) => {
             sound: "default",
             title,
             body,
+            channelId: "default",
+            priority: "high",
           }));
           const chunks = expo.chunkPushNotifications(messages);
           for (const chunk of chunks) {
@@ -85,6 +87,8 @@ const sendNotification = async (tokens, title, body, data = {}) => {
       title,
       body,
       data,
+      channelId: "default",
+      priority: "high",
     });
   }
 

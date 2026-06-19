@@ -137,6 +137,15 @@ exports.registerToken = async (req, res) => {
     } else {
       await UserToken.create({ expoPushToken: token, userId: req.user._id, deviceType });
     }
+
+    const User = require("../models/User");
+    const user = await User.findById(req.user._id);
+    if (user && (!user.settings || !user.settings.has_mobile_app)) {
+      if (!user.settings) user.settings = {};
+      user.settings.has_mobile_app = true;
+      await user.save();
+    }
+
     res.status(200).json({ message: "Token registered" });
   } catch (error) {
     res.status(500).json({ error: error.message });
@@ -150,14 +159,16 @@ exports.sendNotificationsByEmail = async (req, res) => {
 
     const user = await User.findOne({ email });
     if (!user) return res.status(404).json({ message: "User not found" });
-    if (!user.expoPushToken) return res.status(400).json({ message: "No push token registered for this user" });
+
+    const userTokens = await UserToken.find({ userId: user._id });
+    if (!userTokens.length) return res.status(400).json({ message: "No push token registered for this user" });
 
     if (user.settings?.notifications_enabled === false) {
       return res.status(400).json({ message: "Notifications are disabled for this user" });
     }
 
     await sendNotification(
-      [{ expoPushToken: user.expoPushToken }],
+      userTokens.map(t => ({ expoPushToken: t.expoPushToken })),
       title || "Notification",
       body || "You have a new notification."
     );
@@ -175,12 +186,18 @@ exports.sendToAll = async (req, res) => {
     const { message } = req.body;
 
     const users = await User.find({
-      expoPushToken: { $ne: null, $exists: true },
       "settings.notifications_enabled": { $ne: false },
     });
 
-    const tokens = users.map((u) => ({ expoPushToken: u.expoPushToken }));
-    await sendNotification(tokens, "TryOn Update", message || "Check out the latest features in TryOn!");
+    const userIds = users.map(u => u._id);
+    const allTokens = await UserToken.find({ userId: { $in: userIds } });
+    if (allTokens.length) {
+      await sendNotification(
+        allTokens.map(t => ({ expoPushToken: t.expoPushToken })),
+        "TryOn Update",
+        message || "Check out the latest features in TryOn!"
+      );
+    }
     res.json({ message: "Sent successfully" });
   } catch (error) {
     res.status(500).json({ error: error.message });
