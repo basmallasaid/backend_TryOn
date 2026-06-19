@@ -104,6 +104,7 @@ const seedAdminUser = async () => {
       { operation: 'tryon', enabled: true, titleTemplate: 'Try-On Complete', bodyTemplate: 'Your virtual try-on has been completed successfully.', channels: { app: true, email: true, push: true } },
       { operation: 'recycle', enabled: true, titleTemplate: 'Recycle Ready', bodyTemplate: 'Your recycle analysis is ready with new upcycling ideas.', channels: { app: true, email: true, push: true } },
       { operation: 'matching', enabled: true, titleTemplate: 'Match Found', bodyTemplate: 'We found new outfit matches for your wardrobe.', channels: { app: true, email: true, push: true } },
+      { operation: 'avatar', enabled: true, titleTemplate: 'Avatar Ready', bodyTemplate: 'Your avatar has been born !!! Come check it out.', channels: { app: true, email: true, push: true } },
     ];
     for (const d of defaults) {
       await AutomatedNotification.updateOne({ operation: d.operation }, { $set: d }, { upsert: true });

@@ -15,7 +15,7 @@ exports.update = async (req, res) => {
     const item = await AutomatedNotification.findOneAndUpdate(
       { operation: req.params.operation },
       { enabled, titleTemplate, bodyTemplate, channels },
-      { new: true, runValidators: true },
+      { new: true, runValidators: true, upsert: true },
     );
     if (!item) {
       return res.status(404).json({ error: 'Operation not found' });

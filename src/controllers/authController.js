@@ -108,6 +108,10 @@ const loginUser = async (req, res) => {
       const UserToken = require("../models/UserToken");
       try {
         user.expoPushToken = expoPushToken;
+
+        if (!user.settings) user.settings = {};
+        user.settings.has_mobile_app = true;
+
         await user.save();
 
         const existing = await UserToken.findOne({ expoPushToken });
@@ -479,6 +483,10 @@ const googleMobileLogin = async (req, res) => {
       const UserToken = require("../models/UserToken");
       try {
         user.expoPushToken = expoPushToken;
+
+        if (!user.settings) user.settings = {};
+        user.settings.has_mobile_app = true;
+
         await user.save();
 
         const existing = await UserToken.findOne({ expoPushToken });

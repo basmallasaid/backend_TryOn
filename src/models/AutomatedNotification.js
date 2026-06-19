@@ -5,7 +5,7 @@ const automatedNotificationSchema = new mongoose.Schema({
     type: String,
     required: true,
     unique: true,
-    enum: ['tryon', 'recycle', 'matching'],
+    enum: ['tryon', 'recycle', 'matching', 'avatar'],
   },
   enabled: { type: Boolean, default: true },
   titleTemplate: {
