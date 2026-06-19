@@ -125,17 +125,24 @@ exports.registerToken = async (req, res) => {
     const { token, deviceType } = req.body;
     if (!token) return res.status(400).json({ message: "Token is required" });
 
+    console.log(`[Push] Registering token for user ${req.user._id}: ${token}`);
+
     const existing = await UserToken.findOne({ expoPushToken: token });
     if (existing) {
       if (existing.userId && existing.userId.toString() !== req.user._id.toString()) {
         existing.userId = req.user._id;
         await existing.save();
+        console.log(`[Push] Updated existing token to new user ${req.user._id}`);
       } else if (!existing.userId) {
         existing.userId = req.user._id;
         await existing.save();
+        console.log(`[Push] Assigned orphaned token to user ${req.user._id}`);
+      } else {
+        console.log(`[Push] Token already registered for user ${req.user._id}`);
       }
     } else {
       await UserToken.create({ expoPushToken: token, userId: req.user._id, deviceType });
+      console.log(`[Push] Created new token for user ${req.user._id}`);
     }
 
     const User = require("../models/User");
