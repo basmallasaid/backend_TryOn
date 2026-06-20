@@ -12,13 +12,13 @@ const registerUser = async (req, res) => {
 
     if (!email || !password || !confirmPassword) {
       return res.status(400).json({
-        message: "Please fill all fields",
+        message: req.t("auth.requiredFields"),
       });
     }
 
     if (password !== confirmPassword) {
       return res.status(400).json({
-        message: "Passwords do not match",
+        message: req.t("auth.passwordsDoNotMatch"),
       });
     }
 
@@ -26,7 +26,7 @@ const registerUser = async (req, res) => {
 
     if (userExists) {
       return res.status(400).json({
-        message: "User already exists",
+        message: req.t("auth.emailAlreadyRegistered"),
       });
     }
 
@@ -62,7 +62,7 @@ const loginUser = async (req, res) => {
     // Check fields
     if (!email || !password) {
       return res.status(400).json({
-        message: req.t("auth.loginRequiredFields"),
+        message: req.t("auth.requiredFields"),
       });
     }
 
