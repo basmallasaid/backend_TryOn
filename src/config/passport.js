@@ -27,19 +27,33 @@ if (process.env.GOOGLE_CLIENT_ID) {
 
       async (accessToken, refreshToken, profile, done) => {
         try {
-          console.log(`[Google OAuth] Looking up user by google_id: ${profile.id}`);
-          console.log(`[Google OAuth] Profile fields available:`, Object.keys(profile));
-          console.log(`[Google OAuth] profile.photos:`, JSON.stringify(profile.photos));
-          console.log(`[Google OAuth] profile._json.picture:`, profile._json?.picture);
+          console.log(
+            `[Google OAuth] Looking up user by google_id: ${profile.id}`,
+          );
+          console.log(
+            `[Google OAuth] Profile fields available:`,
+            Object.keys(profile),
+          );
+          console.log(
+            `[Google OAuth] profile.photos:`,
+            JSON.stringify(profile.photos),
+          );
+          console.log(
+            `[Google OAuth] profile._json.picture:`,
+            profile._json?.picture,
+          );
 
           let user = await User.findOne({
             google_id: profile.id,
           });
 
-          const googleImage = profile.photos?.[0]?.value || profile._json?.picture || "";
+          const googleImage =
+            profile.photos?.[0]?.value || profile._json?.picture || "";
 
           if (!user) {
-            console.log(`[Google OAuth] User not found, creating new user for email: ${profile.emails?.[0]?.value}`);
+            console.log(
+              `[Google OAuth] User not found, creating new user for email: ${profile.emails?.[0]?.value}`,
+            );
 
             user = await User.create({
               google_id: profile.id,
@@ -52,14 +66,20 @@ if (process.env.GOOGLE_CLIENT_ID) {
               },
             });
 
-            console.log(`[Google OAuth] New user created with _id: ${user._id}, userImage: "${user.userImage}"`);
+            console.log(
+              `[Google OAuth] New user created with _id: ${user._id}, userImage: "${user.userImage}"`,
+            );
           } else {
-            console.log(`[Google OAuth] Existing user found with _id: ${user._id}, current userImage: "${user.userImage}"`);
+            console.log(
+              `[Google OAuth] Existing user found with _id: ${user._id}, current userImage: "${user.userImage}"`,
+            );
             if (googleImage && googleImage !== user.userImage) {
               user.userImage = googleImage;
               user.markModified("userImage");
               await user.save();
-              console.log(`[Google OAuth] Updated user image to: "${user.userImage}"`);
+              console.log(
+                `[Google OAuth] Updated user image to: "${user.userImage}"`,
+              );
             }
           }
 
@@ -109,6 +129,9 @@ if (process.env.GOOGLE_CLIENT_ID) {
       }
       if (options.device_name) {
         params["device_name"] = options.device_name;
+      }
+      if (options.hl) {
+        params["hl"] = options.hl;
       }
 
       return params;

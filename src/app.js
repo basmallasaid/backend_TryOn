@@ -6,9 +6,7 @@ const swaggerUi = require("swagger-ui-express");
 const swaggerSpec = require("./config/swagger");
 require("./config/passport");
 
-const {
-  extractKeys,
-} = require("./middlewares/extractKeys");
+const { extractKeys } = require("./middlewares/extractKeys");
 const analyzeRoutes = require("./routes/analyzeRoutes");
 const wardrobeRoutes = require("./routes/wardrobeRoutes");
 const matchesRoutes = require("./routes/matchesRoutes");
@@ -18,6 +16,7 @@ const recycleRoutes = require("./routes/recycleRoutes");
 const weatherRoutes = require("./routes/weatherRoutes");
 const avatarRoutes = require("./routes/avatarRoutes");
 const notificationRoutes = require("./routes/notificationRoutes");
+const i18nMiddleware = require("./middlewares/i18nMiddleware");
 
 const authRoutes = require("./routes/authRoutes");
 const userRoutes = require("./routes/userRoutes");
@@ -30,10 +29,14 @@ const emailRoutes = require("./routes/emailRoutes");
 const app = express();
 
 // Swagger Documentation
-app.use("/api-docs", swaggerUi.serve, swaggerUi.setup(swaggerSpec, {
-  customCss: ".swagger-ui .topbar { display: none }",
-  customSiteTitle: "TryOn API Docs",
-}));
+app.use(
+  "/api-docs",
+  swaggerUi.serve,
+  swaggerUi.setup(swaggerSpec, {
+    customCss: ".swagger-ui .topbar { display: none }",
+    customSiteTitle: "TryOn API Docs",
+  }),
+);
 app.get("/api-docs.json", (req, res) => {
   res.setHeader("Content-Type", "application/json");
   res.send(swaggerSpec);
@@ -46,6 +49,7 @@ app.use(cors());
 app.use("/api/webhooks", webhookRoutes);
 
 app.use(express.json());
+app.use(i18nMiddleware);
 app.use(
   session({
     secret: "secret",
@@ -70,7 +74,13 @@ const seedAdminUser = async () => {
     const hash = await bcrypt.hash(getEncryptedPassword(), 10);
     const exists = await User.findOne({ email: adminEmail });
     if (!exists) {
-      await User.create({ email: adminEmail, password_hash: hash, role: "admin", auth_provider: "local", is_verified: true });
+      await User.create({
+        email: adminEmail,
+        password_hash: hash,
+        role: "admin",
+        auth_provider: "local",
+        is_verified: true,
+      });
       console.log(`[Seed] Admin user created: ${adminEmail}`);
     }
   } catch (e) {
@@ -84,11 +94,36 @@ const seedAdminUser = async () => {
     const count = await ApiKey.countDocuments();
     if (count > 0) return;
     const defaults = [
-      { name: "Recycle Analysis Model", service: "Recycle Analysis Model", key: process.env.HF_TOKEN || "", status: "Active" },
-      { name: "Recycle Image Generation", service: "Recycle Image Generation", key: process.env.DASHSCOPE_API_KEY || "", status: "Active" },
-      { name: "Try On Image Generation", service: "Try On Image Generation", key: process.env.KIE_API_key || "", status: "Active" },
-      { name: "Try On Analysis Model", service: "Try On Analysis Model", key: process.env.HF_TOKEN || "", status: "Active" },
-      { name: "Avatar Generation Model", service: "Avatar Generation Model", key: process.env.KIE_API_key || "", status: "Active" },
+      {
+        name: "Recycle Analysis Model",
+        service: "Recycle Analysis Model",
+        key: process.env.HF_TOKEN || "",
+        status: "Active",
+      },
+      {
+        name: "Recycle Image Generation",
+        service: "Recycle Image Generation",
+        key: process.env.DASHSCOPE_API_KEY || "",
+        status: "Active",
+      },
+      {
+        name: "Try On Image Generation",
+        service: "Try On Image Generation",
+        key: process.env.KIE_API_key || "",
+        status: "Active",
+      },
+      {
+        name: "Try On Analysis Model",
+        service: "Try On Analysis Model",
+        key: process.env.HF_TOKEN || "",
+        status: "Active",
+      },
+      {
+        name: "Avatar Generation Model",
+        service: "Avatar Generation Model",
+        key: process.env.KIE_API_key || "",
+        status: "Active",
+      },
     ];
     await ApiKey.insertMany(defaults);
     console.log("[Seed] Default API keys created");
@@ -101,13 +136,35 @@ const seedAdminUser = async () => {
 (async () => {
   try {
     const defaults = [
-      { operation: 'tryon', enabled: true, titleTemplate: 'Try-On Complete', bodyTemplate: 'Your virtual try-on has been completed successfully.', channels: { app: true, email: true, push: true } },
-      { operation: 'recycle', enabled: true, titleTemplate: 'Recycle Ready', bodyTemplate: 'Your recycle analysis is ready with new upcycling ideas.', channels: { app: true, email: true, push: true } },
-      { operation: 'matching', enabled: true, titleTemplate: 'Match Found', bodyTemplate: 'We found new outfit matches for your wardrobe.', channels: { app: true, email: true, push: true } },
-      { operation: 'avatar', enabled: true, titleTemplate: 'Avatar Ready', bodyTemplate: 'Your avatar has been born !!! Come check it out.', channels: { app: true, email: true, push: true } },
+      {
+        operation: "tryon",
+        enabled: true,
+        titleTemplate: "Try-On Complete",
+        bodyTemplate: "Your virtual try-on has been completed successfully.",
+        channels: { app: true, email: true, push: true },
+      },
+      {
+        operation: "recycle",
+        enabled: true,
+        titleTemplate: "Recycle Ready",
+        bodyTemplate:
+          "Your recycle analysis is ready with new upcycling ideas.",
+        channels: { app: true, email: true, push: true },
+      },
+      {
+        operation: "matching",
+        enabled: true,
+        titleTemplate: "Match Found",
+        bodyTemplate: "We found new outfit matches for your wardrobe.",
+        channels: { app: true, email: true, push: true },
+      },
     ];
     for (const d of defaults) {
-      await AutomatedNotification.updateOne({ operation: d.operation }, { $set: d }, { upsert: true });
+      await AutomatedNotification.updateOne(
+        { operation: d.operation },
+        { $set: d },
+        { upsert: true },
+      );
     }
     console.log("[Seed] Automated notification configs ready");
   } catch (e) {

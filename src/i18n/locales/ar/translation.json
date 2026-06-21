@@ -1,0 +1,9 @@
+{
+  "auth": {
+    "requiredFields": "يرجى ملء جميع الحقول",
+    "invalidCredentials": "البريد الإلكتروني أو كلمة المرور غير صحيحة",
+    "googleLoginError": "يرجى استخدام تسجيل الدخول عبر Google لهذا الحساب",
+    "emailAlreadyRegistered": "المستخدم موجود بالفعل",
+    "passwordsDoNotMatch": "كلمات المرور غير متطابقة"
+  }
+}

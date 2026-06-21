@@ -1,0 +1,9 @@
+{
+  "auth": {
+    "requiredFields": "Please fill all fields",
+    "invalidCredentials": "Invalid email or password",
+    "googleLoginError": "Please use Google login for this account",
+    "emailAlreadyRegistered": "User already exists",
+    "passwordsDoNotMatch": "Passwords do not match"
+  }
+}

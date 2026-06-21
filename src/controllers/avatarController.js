@@ -25,7 +25,8 @@ const createAvatar = async (req, res) => {
       weight,
     });
 
-    const prompt = `A photorealistic full-body image of an Egyptian ${age} ${gender} with ${skin_tone} skin, a ${face_shape} face, ${hair_color} hair, ${eye_color}, ${beard_style} beard, ${height} tall, ${weight}, and a ${facial_expression} expression. The person is wearing a white shirt and jeans. Front-facing, well-lit, white background, high-quality digital avatar. The entire body from head to toe must be visible.`;
+    const beardText = beard_style === 'clean shave' ? 'clean shaven, no facial hair' : `${beard_style} beard`;
+    const prompt = `A photorealistic full-body image of an Egyptian ${age} ${gender} with ${skin_tone} skin, a ${face_shape} face, ${hair_color} hair, ${eye_color}, ${beardText}, ${height} tall, ${weight}, and a ${facial_expression} expression. The person is wearing a white shirt and jeans. Front-facing, well-lit, white background, high-quality digital avatar. The entire body from head to toe must be visible.`;
 
     try {
       const apiKey = process.env.KIE_API_key;
