@@ -125,24 +125,17 @@ exports.registerToken = async (req, res) => {
     const { token, deviceType } = req.body;
     if (!token) return res.status(400).json({ message: "Token is required" });
 
-    console.log(`[Push] Registering token for user ${req.user._id}: ${token}`);
-
     const existing = await UserToken.findOne({ expoPushToken: token });
     if (existing) {
       if (existing.userId && existing.userId.toString() !== req.user._id.toString()) {
         existing.userId = req.user._id;
         await existing.save();
-        console.log(`[Push] Updated existing token to new user ${req.user._id}`);
       } else if (!existing.userId) {
         existing.userId = req.user._id;
         await existing.save();
-        console.log(`[Push] Assigned orphaned token to user ${req.user._id}`);
-      } else {
-        console.log(`[Push] Token already registered for user ${req.user._id}`);
       }
     } else {
       await UserToken.create({ expoPushToken: token, userId: req.user._id, deviceType });
-      console.log(`[Push] Created new token for user ${req.user._id}`);
     }
 
     const User = require("../models/User");
@@ -166,16 +159,14 @@ exports.sendNotificationsByEmail = async (req, res) => {
 
     const user = await User.findOne({ email });
     if (!user) return res.status(404).json({ message: "User not found" });
-
-    const userTokens = await UserToken.find({ userId: user._id });
-    if (!userTokens.length) return res.status(400).json({ message: "No push token registered for this user" });
+    if (!user.expoPushToken) return res.status(400).json({ message: "No push token registered for this user" });
 
     if (user.settings?.notifications_enabled === false) {
       return res.status(400).json({ message: "Notifications are disabled for this user" });
     }
 
     await sendNotification(
-      userTokens.map(t => ({ expoPushToken: t.expoPushToken })),
+      [{ expoPushToken: user.expoPushToken }],
       title || "Notification",
       body || "You have a new notification."
     );
@@ -193,18 +184,12 @@ exports.sendToAll = async (req, res) => {
     const { message } = req.body;
 
     const users = await User.find({
+      expoPushToken: { $ne: null, $exists: true },
       "settings.notifications_enabled": { $ne: false },
     });
 
-    const userIds = users.map(u => u._id);
-    const allTokens = await UserToken.find({ userId: { $in: userIds } });
-    if (allTokens.length) {
-      await sendNotification(
-        allTokens.map(t => ({ expoPushToken: t.expoPushToken })),
-        "TryOn Update",
-        message || "Check out the latest features in TryOn!"
-      );
-    }
+    const tokens = users.map((u) => ({ expoPushToken: u.expoPushToken }));
+    await sendNotification(tokens, "TryOn Update", message || "Check out the latest features in TryOn!");
     res.json({ message: "Sent successfully" });
   } catch (error) {
     res.status(500).json({ error: error.message });

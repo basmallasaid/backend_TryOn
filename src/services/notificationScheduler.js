@@ -33,8 +33,6 @@ const processScheduledNotifications = async () => {
             sound: "default",
             title: notif.title,
             body: notif.body,
-            channelId: "default",
-            priority: "high",
           }));
           const chunks = expo.chunkPushNotifications(messages);
           for (const chunk of chunks) {
