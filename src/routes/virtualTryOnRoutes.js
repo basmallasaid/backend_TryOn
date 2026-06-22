@@ -1,6 +1,7 @@
 const { Router } = require("express");
 const multer = require("multer");
 const protect = require("../middlewares/authMiddleware");
+const { checkLimit, incrementUsage } = require("../middlewares/usageLimit");
 const { generateVirtualTryOn, generateOutfitTryOn } = require("../services/virtualTryOn.js");
 const { classifyImage } = require("../services/classify.js");
 const { sendAutomated } = require("../services/notificationService");
@@ -76,6 +77,7 @@ const upload = multer({ storage: multer.memoryStorage() });
 router.post(
   "/",
   protect,
+  checkLimit("tryon"),
   upload.fields([
     { name: "personImage", maxCount: 1 },
     { name: "garmentImage", maxCount: 1 },
@@ -100,6 +102,8 @@ router.post(
         prompt: req.body?.prompt || undefined,
         apiKey: req.apiKeys?.KIE_API_KEY || process.env.KIE_API_key,
       });
+
+      await incrementUsage(req.user._id, "tryon");
 
       if (req.user?._id) {
         sendAutomated('tryon', req.user._id, { operation: 'try-on' });
@@ -184,6 +188,7 @@ router.post(
 router.post(
   "/outfit",
   protect,
+  checkLimit("tryon"),
   upload.fields([
     { name: "personImage", maxCount: 1 },
     { name: "topImage", maxCount: 1 },
@@ -248,6 +253,8 @@ router.post(
         prompt: req.body?.prompt || undefined,
         apiKey: req.apiKeys?.KIE_API_KEY || process.env.KIE_API_key,
       });
+
+      await incrementUsage(req.user._id, "tryon");
 
       if (req.user?._id) {
         sendAutomated('tryon', req.user._id, { operation: 'try-on' });

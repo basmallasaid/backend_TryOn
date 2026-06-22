@@ -622,8 +622,26 @@ router.put("/user-image", protect, updateUserImage);
 router.delete("/user-image", protect, deleteUserImage);
 
 const { getAllUsers, getUserStats, createAdminUser, deleteUser, markUserDeletionNotified, updateUser } = require("../controllers/userController");
+const { getLimitsForUser } = require("../middlewares/usageLimit");
 
 router.get("/stats", protect, adminOnly, getUserStats);
+
+router.get("/usage", protect, async (req, res) => {
+  try {
+    const User = require("../models/User");
+    const user = await User.findById(req.user._id);
+    if (!user) return res.status(404).json({ message: "User not found" });
+
+    const limits = getLimitsForUser(user);
+    res.json({
+      tryon: { used: user.usage.tryonUsed, limit: limits.tryon },
+      recycle: { used: user.usage.recycleUsed, limit: limits.recycle },
+      avatar: { used: user.usage.avatarUsed || 0, limit: limits.avatar },
+    });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
 router.get("/", protect, adminOnly, getAllUsers);
 router.post("/", protect, adminOnly, createAdminUser);
 router.patch("/:id/mark-notified", protect, adminOnly, markUserDeletionNotified);

@@ -2,6 +2,7 @@ const express = require("express");
 const router = express.Router();
 const { createAvatar, getUserAvatars, getAvatarById, updateAvatar, deleteAvatar } = require("../controllers/avatarController");
 const protect = require("../middlewares/authMiddleware");
+const { checkLimit } = require("../middlewares/usageLimit");
 
 /**
  * @swagger
@@ -94,7 +95,7 @@ const protect = require("../middlewares/authMiddleware");
  *       500:
  *         description: Avatar generation failed
  */
-router.post("/", protect, createAvatar);
+router.post("/", protect, checkLimit("avatar"), createAvatar);
 
 /**
  * @swagger
