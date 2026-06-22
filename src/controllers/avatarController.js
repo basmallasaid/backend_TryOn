@@ -2,6 +2,7 @@ const Avatar = require("../models/Avatar");
 const User = require("../models/User");
 const { generateAvatarImage } = require("../services/imageGenerationService");
 const { sendAutomated } = require("../services/notificationService");
+const { incrementUsage } = require("../middlewares/usageLimit");
 
 const createAvatar = async (req, res) => {
   try {
@@ -44,6 +45,8 @@ const createAvatar = async (req, res) => {
     }
 
     await User.findByIdAndUpdate(req.user._id, { $push: { avatars: avatar._id } });
+
+    await incrementUsage(req.user._id, "avatar");
 
     sendAutomated('avatar', req.user._id, { operation: 'avatar' });
 

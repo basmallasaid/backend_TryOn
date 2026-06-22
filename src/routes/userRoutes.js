@@ -635,11 +635,12 @@ router.get("/usage", protect, async (req, res) => {
     const limits = getLimitsForUser(user);
     const currentMonth = getCurrentMonth();
     if (user.usage?.usageMonth !== currentMonth) {
-      return res.json({ tryon: { used: 0, limit: limits.tryon }, recycle: { used: 0, limit: limits.recycle } });
+      return res.json({ tryon: { used: 0, limit: limits.tryon }, recycle: { used: 0, limit: limits.recycle }, avatar: { used: 0, limit: limits.avatar } });
     }
     res.json({
       tryon: { used: user.usage.tryonUsed, limit: limits.tryon },
       recycle: { used: user.usage.recycleUsed, limit: limits.recycle },
+      avatar: { used: user.usage.avatarUsed || 0, limit: limits.avatar },
     });
   } catch (error) {
     res.status(500).json({ error: error.message });

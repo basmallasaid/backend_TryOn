@@ -1,9 +1,9 @@
 const User = require("../models/User");
 
 const LIMITS = {
-  normal: { tryon: 5, recycle: 4 },
-  premium_monthly: { tryon: 50, recycle: 40 },
-  premium_yearly: { tryon: 600, recycle: 480 },
+  normal: { tryon: 5, recycle: 4, avatar: 1 },
+  premium_monthly: { tryon: 50, recycle: 40, avatar: 15 },
+  premium_yearly: { tryon: 600, recycle: 480, avatar: 180 },
 };
 
 function getCurrentMonth() {
@@ -22,7 +22,7 @@ function getLimitsForUser(user) {
 async function resetIfNeeded(user) {
   const currentMonth = getCurrentMonth();
   if (user.usage?.usageMonth !== currentMonth) {
-    user.usage = { tryonUsed: 0, recycleUsed: 0, usageMonth: currentMonth };
+    user.usage = { tryonUsed: 0, recycleUsed: 0, avatarUsed: 0, usageMonth: currentMonth };
     await user.save();
   }
 }
@@ -36,8 +36,10 @@ function checkLimit(feature) {
       await resetIfNeeded(user);
 
       const limits = getLimitsForUser(user);
-      const used = feature === "tryon" ? user.usage.tryonUsed : user.usage.recycleUsed;
-      const limit = feature === "tryon" ? limits.tryon : limits.recycle;
+      const usedMap = { tryon: user.usage.tryonUsed, recycle: user.usage.recycleUsed, avatar: user.usage.avatarUsed || 0 };
+      const limitMap = { tryon: limits.tryon, recycle: limits.recycle, avatar: limits.avatar };
+      const used = usedMap[feature] || 0;
+      const limit = limitMap[feature] || 0;
 
       if (used >= limit) {
         return res.status(403).json({
@@ -63,11 +65,12 @@ async function incrementUsage(userId, feature) {
 
   const currentMonth = getCurrentMonth();
   if (user.usage?.usageMonth !== currentMonth) {
-    user.usage = { tryonUsed: 0, recycleUsed: 0, usageMonth: currentMonth };
+    user.usage = { tryonUsed: 0, recycleUsed: 0, avatarUsed: 0, usageMonth: currentMonth };
   }
 
   if (feature === "tryon") user.usage.tryonUsed += 1;
   else if (feature === "recycle") user.usage.recycleUsed += 1;
+  else if (feature === "avatar") user.usage.avatarUsed = (user.usage.avatarUsed || 0) + 1;
 
   await user.save();
 }
