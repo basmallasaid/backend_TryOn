@@ -9,24 +9,26 @@ const SERVICE_TO_KEY_MAP = {
 };
 
 async function extractKeys(req, res, next) {
-  req.apiKeys = {
-    HF_TOKEN: req.headers["x-hf-token"] || req.headers["x-huggingface-token"],
-    KIE_API_KEY: req.headers["x-kie-api-key"],
-    DASHSCOPE_API_KEY: req.headers["x-dashscope-api-key"],
-    GITHUB_TOKEN: req.headers["x-github-token"],
-  };
+  const fromDb = {};
 
   try {
     const activeKeys = await ApiKey.find({ status: "Active" }).lean();
     for (const ak of activeKeys) {
       const envKey = SERVICE_TO_KEY_MAP[ak.service];
       if (envKey && ak.key) {
-        req.apiKeys[envKey] = ak.key;
+        fromDb[envKey] = ak.key;
       }
     }
   } catch (e) {
     console.error("[extractKeys] Failed to load API keys from DB:", e.message);
   }
+
+  req.apiKeys = {
+    HF_TOKEN: req.headers["x-hf-token"] || req.headers["x-huggingface-token"] || fromDb.HF_TOKEN,
+    KIE_API_KEY: req.headers["x-kie-api-key"] || fromDb.KIE_API_KEY,
+    DASHSCOPE_API_KEY: req.headers["x-dashscope-api-key"] || fromDb.DASHSCOPE_API_KEY,
+    GITHUB_TOKEN: req.headers["x-github-token"],
+  };
 
   next();
 }
