@@ -622,7 +622,7 @@ router.put("/user-image", protect, updateUserImage);
 router.delete("/user-image", protect, deleteUserImage);
 
 const { getAllUsers, getUserStats, createAdminUser, deleteUser, markUserDeletionNotified, updateUser } = require("../controllers/userController");
-const { getLimitsForUser, getCurrentPeriod } = require("../middlewares/usageLimit");
+const { getLimitsForUser } = require("../middlewares/usageLimit");
 
 router.get("/stats", protect, adminOnly, getUserStats);
 
@@ -633,10 +633,6 @@ router.get("/usage", protect, async (req, res) => {
     if (!user) return res.status(404).json({ message: "User not found" });
 
     const limits = getLimitsForUser(user);
-    const currentPeriod = getCurrentPeriod(user);
-    if (user.usage?.usageMonth !== currentPeriod) {
-      return res.json({ tryon: { used: 0, limit: limits.tryon }, recycle: { used: 0, limit: limits.recycle }, avatar: { used: 0, limit: limits.avatar } });
-    }
     res.json({
       tryon: { used: user.usage.tryonUsed, limit: limits.tryon },
       recycle: { used: user.usage.recycleUsed, limit: limits.recycle },

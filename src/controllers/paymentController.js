@@ -1,4 +1,5 @@
 const User = require("../models/User");
+const { resetUsage } = require("../middlewares/usageLimit");
 
 const stripe = process.env.STRIPE_SECRET_KEY
   ? require("stripe")(process.env.STRIPE_SECRET_KEY)
@@ -186,6 +187,7 @@ const syncSubscription = async (req, res) => {
         }
       }
       await user.save();
+      await resetUsage(user._id);
       return res.json({
         subscriptionStatus: "active",
         subscriptionId: sub.id,

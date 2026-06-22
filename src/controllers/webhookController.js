@@ -1,4 +1,5 @@
 const User = require("../models/User");
+const { resetUsage } = require("../middlewares/usageLimit");
 
 let stripe = null;
 if (process.env.STRIPE_SECRET_KEY) {
@@ -45,6 +46,8 @@ const handleWebhook = async (req, res) => {
           subscriptionPlan: plan || null,
           subscriptionInterval: interval || null,
         });
+
+        await resetUsage(userId);
       }
       break;
     }
@@ -76,10 +79,12 @@ const handleWebhook = async (req, res) => {
     case "invoice.payment_succeeded": {
       const invoice = event.data.object;
       if (invoice.subscription) {
-        await User.findOneAndUpdate(
-          { stripeCustomerId: invoice.customer },
-          { subscriptionStatus: "active" },
-        );
+        const user = await User.findOne({ stripeCustomerId: invoice.customer });
+        if (user) {
+          user.subscriptionStatus = "active";
+          await user.save();
+          await resetUsage(user._id);
+        }
       }
       break;
     }
