@@ -303,11 +303,13 @@ function checkGoogleStrategy(req, res, next) {
 }
 
 router.get("/google", checkGoogleStrategy, (req, res, next) => {
+  const clientUrl = req.query.client_url || process.env.CLIENT_URL;
   passport.authenticate("google", {
     scope: ["profile", "email"],
     device_id: req.query.device_id,
     device_name: req.query.device_name,
     hl: req.query.lang || "en",
+    state: clientUrl,
   })(req, res, next);
 });
 
@@ -328,13 +330,12 @@ router.get(
   checkGoogleStrategy,
   (req, res, next) => {
     passport.authenticate("google", { session: false }, (err, user, info) => {
+      const clientUrl = req.query.state || process.env.CLIENT_URL;
       if (err || !user) {
         const errorMsg = encodeURIComponent(
           err?.message || "google_login_failed",
         );
-        return res.redirect(
-          `${process.env.CLIENT_URL}/auth/callback?error=${errorMsg}`,
-        );
+        return res.redirect(`${clientUrl}/auth/callback?error=${errorMsg}`);
       }
       req.user = user;
       next();
@@ -350,7 +351,8 @@ router.get(
     const lname = req.user.profile?.last_name || "";
     const image = req.user.userImage || "";
     const role = req.user.role || "user";
-    const url = `${process.env.CLIENT_URL}/auth/callback?token=${token}&_id=${req.user._id}&email=${req.user.email}&role=${role}&fname=${encodeURIComponent(fname)}&lname=${encodeURIComponent(lname)}&image=${encodeURIComponent(image)}`;
+    const clientUrl = req.query.state || process.env.CLIENT_URL;
+    const url = `${clientUrl}/auth/callback?token=${token}&_id=${req.user._id}&email=${req.user.email}&role=${role}&fname=${encodeURIComponent(fname)}&lname=${encodeURIComponent(lname)}&image=${encodeURIComponent(image)}`;
     console.log(`[Google Callback] Redirecting to frontend callback`);
     res.redirect(url);
   },
