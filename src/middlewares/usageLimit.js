@@ -11,6 +11,13 @@ function getCurrentMonth() {
   return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
 }
 
+function getCurrentPeriod(user) {
+  if (user.subscriptionStatus === "active" && user.subscriptionInterval === "year") {
+    return `${new Date().getFullYear()}`;
+  }
+  return getCurrentMonth();
+}
+
 function getLimitsForUser(user) {
   if (user.subscriptionStatus === "active") {
     if (user.subscriptionInterval === "year") return LIMITS.premium_yearly;
@@ -20,9 +27,9 @@ function getLimitsForUser(user) {
 }
 
 async function resetIfNeeded(user) {
-  const currentMonth = getCurrentMonth();
-  if (user.usage?.usageMonth !== currentMonth) {
-    user.usage = { tryonUsed: 0, recycleUsed: 0, avatarUsed: 0, usageMonth: currentMonth };
+  const currentPeriod = getCurrentPeriod(user);
+  if (user.usage?.usageMonth !== currentPeriod) {
+    user.usage = { tryonUsed: 0, recycleUsed: 0, avatarUsed: 0, usageMonth: currentPeriod };
     await user.save();
   }
 }
@@ -63,9 +70,9 @@ async function incrementUsage(userId, feature) {
   const user = await User.findById(userId);
   if (!user) return;
 
-  const currentMonth = getCurrentMonth();
-  if (user.usage?.usageMonth !== currentMonth) {
-    user.usage = { tryonUsed: 0, recycleUsed: 0, avatarUsed: 0, usageMonth: currentMonth };
+  const currentPeriod = getCurrentPeriod(user);
+  if (user.usage?.usageMonth !== currentPeriod) {
+    user.usage = { tryonUsed: 0, recycleUsed: 0, avatarUsed: 0, usageMonth: currentPeriod };
   }
 
   if (feature === "tryon") user.usage.tryonUsed += 1;
@@ -79,4 +86,4 @@ function getUsageLimits() {
   return LIMITS;
 }
 
-module.exports = { checkLimit, incrementUsage, getLimitsForUser, getUsageLimits, getCurrentMonth };
+module.exports = { checkLimit, incrementUsage, getLimitsForUser, getUsageLimits, getCurrentMonth, getCurrentPeriod };
