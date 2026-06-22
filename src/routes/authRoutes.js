@@ -306,6 +306,7 @@ router.get("/google", checkGoogleStrategy, (req, res, next) => {
   const clientUrl = req.query.client_url || process.env.CLIENT_URL;
   passport.authenticate("google", {
     scope: ["profile", "email"],
+    prompt: "select_account",
     device_id: req.query.device_id,
     device_name: req.query.device_name,
     hl: req.query.lang || "en",
