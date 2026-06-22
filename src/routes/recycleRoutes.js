@@ -2,6 +2,7 @@ const { Router } = require("express");
 const multer = require("multer");
 const recycleController = require("../controllers/recycleController");
 const protect = require("../middlewares/authMiddleware");
+const { checkLimit, incrementUsage } = require("../middlewares/usageLimit");
 
 const router = Router();
 const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 10 * 1024 * 1024 } });
@@ -65,7 +66,18 @@ const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 10 
  *       500:
  *         description: Analysis failed
  */
-router.post("/analyze", protect, upload.array("images", 3), recycleController.analyze);
+router.post("/analyze", protect, checkLimit("recycle"), upload.array("images", 3), async (req, res) => {
+  try {
+    await recycleController.analyze(req, res);
+    if (res.statusCode === 200) {
+      await incrementUsage(req.user._id, "recycle");
+    }
+  } catch (err) {
+    if (!res.headersSent) {
+      res.status(500).json({ error: err.message });
+    }
+  }
+});
 
 /**
  * @swagger

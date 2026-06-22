@@ -152,6 +152,12 @@ const userSchema = new mongoose.Schema(
       },
     ],
 
+    usage: {
+      tryonUsed: { type: Number, default: 0 },
+      recycleUsed: { type: Number, default: 0 },
+      usageMonth: { type: String, default: null },
+    },
+
     latestTryOn: {
       type: [{
         imageUrl: { type: String, required: true },
