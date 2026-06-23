@@ -2,7 +2,7 @@ const ApiKey = require("../models/ApiKey");
 
 const SERVICE_TO_KEY_MAP = {
   "Try On Image Generation": "KIE_API_KEY",
-  "Avatar Generation Model": "KIE_API_KEY",
+  "Avatar Generation Model": "KIE_AVATAR_API_KEY",
   "Recycle Analysis Model": "HF_TOKEN",
   "Try On Analysis Model": "HF_TOKEN",
   "Recycle Image Generation": "DASHSCOPE_API_KEY",
